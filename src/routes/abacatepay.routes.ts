@@ -32,15 +32,15 @@ export async function abacatePayRoutes(fastify: FastifyInstance) {
     schema: {
       description: 'Receive webhook from AbacatePay and create customer',
       tags: ['webhooks'],
-      querystring: {
+      headers: {
         type: 'object',
         properties: {
-          webhookSecret: { 
+          'x-webhook-signature': { 
             type: 'string',
-            description: 'Webhook secret token for validation',
+            description: 'HMAC signature for webhook validation',
           },
         },
-        required: ['webhookSecret'],
+        required: ['x-webhook-signature'],
       },
       body: {
         type: 'object',

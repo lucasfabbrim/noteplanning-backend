@@ -1,6 +1,5 @@
 import { FastifyInstance } from 'fastify';
 import { PrismaClient } from '@prisma/client';
-import { CustomerController } from '@/controllers';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { env } from '@/config';
@@ -8,7 +7,6 @@ import { requireAdmin } from '@/middleware';
 
 export async function customersRoutes(fastify: FastifyInstance) {
   const prisma = new PrismaClient();
-  const customerController = new CustomerController(prisma);
 
   // GET /customers - List all customers (Admin only)
   fastify.get('/', {
@@ -381,13 +379,6 @@ export async function customersRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // POST /customers/login - Customer login
-  fastify.post('/login', {
-    schema: {
-      description: 'Authenticate customer',
-      tags: ['customers', 'auth']
-    }
-  }, customerController.loginCustomer.bind(customerController));
 
   // GET /customers/stats - Get customer statistics (Admin only)
   fastify.get('/stats', {

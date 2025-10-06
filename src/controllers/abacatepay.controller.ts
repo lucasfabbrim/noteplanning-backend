@@ -27,34 +27,34 @@ export class AbacatePayController extends BaseController {
    */
   async handleWebhook(request: FastifyRequest, reply: FastifyReply) {
     try {
-      // Validate query params
-      const queryValidation = abacatePayWebhookQuerySchema.safeParse(request.query);
+      // Get raw body for HMAC verification
+      const rawBody = JSON.stringify(request.body);
       
-      if (!queryValidation.success) {
-        const zodError = queryValidation.error as any;
-        return reply.status(400).send({
-          success: false,
-          message: 'Invalid query parameters',
-          errors: zodError.errors,
-        });
-      }
-
-      const query = queryValidation.data as AbacatePayWebhookQuery;
-
-      // Validate webhook secret
-      const isValidSecret = this.abacatePayService.validateWebhookSecret(
-        query.webhookSecret,
-        env.ABACATEPAY_TOKEN_SECRET
-      );
-
-      if (!isValidSecret) {
-        LoggerHelper.warn('AbacatePayController', 'handleWebhook', 'Unauthorized attempt', {
+      // Get signature from header
+      const signature = request.headers['x-webhook-signature'] as string;
+      
+      if (!signature) {
+        LoggerHelper.warn('AbacatePayController', 'handleWebhook', 'Missing signature header', {
           ip: request.ip,
         });
 
         return reply.status(401).send({
           success: false,
-          message: 'Unauthorized',
+          message: 'Missing signature header',
+        });
+      }
+
+      // Validate HMAC signature
+      const isValidSignature = this.abacatePayService.verifyAbacateSignature(rawBody, signature);
+
+      if (!isValidSignature) {
+        LoggerHelper.warn('AbacatePayController', 'handleWebhook', 'Invalid signature', {
+          ip: request.ip,
+        });
+
+        return reply.status(401).send({
+          success: false,
+          message: 'Invalid signature',
         });
       }
 
