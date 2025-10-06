@@ -1,7 +1,7 @@
 # fly.toml app configuration file generated for noteplanning-backend
 
 app = "noteplanning-backend"
-primary_region = "gru"  # São Paulo region
+primary_region = "gru"  # São Paulo region (updated from deprecated gig)
 
 [build]
 
@@ -29,6 +29,9 @@ primary_region = "gru"  # São Paulo region
   cpu_kind = "shared"
   cpus = 1
   memory_mb = 256
+
+[[vm.regions]]
+  region = "gru"
 
 [deploy]
   release_command = "npx prisma migrate deploy"
