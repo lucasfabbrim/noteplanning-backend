@@ -108,6 +108,8 @@ export class PurchaseController extends BaseController {
           customerPhone: body.customerPhone,
           customerTaxId: body.customerTaxId,
           products: body.products,
+          paymentMethod: body.paymentMethod || 'manual',
+          transactionId: body.transactionId || `manual_${Date.now()}`,
           webhookData: body.webhookData,
           devMode: body.devMode || false,
         },

@@ -145,7 +145,12 @@ export class PurchaseService extends BaseService {
     customerId: string;
     amount: number;
     paymentAmount: number;
+    event: string;
     status: string;
+    customerName: string;
+    customerEmail: string;
+    customerPhone?: string;
+    customerTaxId?: string;
     products: any[];
     paymentMethod: string;
     transactionId: string;
@@ -157,7 +162,12 @@ export class PurchaseService extends BaseService {
         customerId: data.customerId,
         amount: data.amount,
         paymentAmount: data.paymentAmount,
+        event: data.event,
         status: data.status,
+        customerName: data.customerName,
+        customerEmail: data.customerEmail,
+        customerPhone: data.customerPhone,
+        customerTaxId: data.customerTaxId,
         products: data.products,
         paymentMethod: data.paymentMethod,
         transactionId: data.transactionId,
