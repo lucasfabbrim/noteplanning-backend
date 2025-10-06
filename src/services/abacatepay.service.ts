@@ -3,6 +3,7 @@ import { BaseService } from './base.service';
 import { CustomerRepository } from '@/repositories/customer.repository';
 import { PurchaseService } from './purchase.service';
 import { EmailService } from './email.service';
+import { ProductService } from './product.service';
 import { 
   AbacatePayWebhookBody, 
   CustomerFromWebhook 
@@ -19,12 +20,14 @@ export class AbacatePayService extends BaseService {
   protected customerRepository: CustomerRepository;
   protected purchaseService: PurchaseService;
   protected emailService: EmailService;
+  protected productService: ProductService;
 
   constructor(prisma: PrismaClient) {
     super(prisma);
     this.customerRepository = new CustomerRepository(prisma);
     this.purchaseService = new PurchaseService(prisma);
     this.emailService = new EmailService();
+    this.productService = new ProductService(prisma);
   }
 
   /**
@@ -109,6 +112,25 @@ export class AbacatePayService extends BaseService {
         } catch (emailError) {
           LoggerHelper.error('AbacatePayService', 'processWebhook', 'Failed to send welcome email', emailError);
           // Don't fail the webhook if email fails
+        }
+      }
+
+      // Process products from webhook
+      const processedProducts = [];
+      if (products && products.length > 0) {
+        for (const product of products) {
+          try {
+            const createdProduct = await this.productService.createOrUpdateProduct({
+              externalId: product.externalId || product.id || 'unknown',
+              name: product.name,
+              description: product.description,
+              price: product.price || billing.amount,
+            });
+            processedProducts.push(createdProduct);
+          } catch (productError) {
+            LoggerHelper.error('AbacatePayService', 'processWebhook', 'Failed to process product', productError);
+            // Continue with other products even if one fails
+          }
         }
       }
 

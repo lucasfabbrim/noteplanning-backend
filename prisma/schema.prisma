@@ -21,7 +21,6 @@ model Customer {
   deactivatedAt        DateTime?
   memberships          Membership[]
   purchases            Purchase[]
-  videos               Video[]
 
   @@index([email])
   @@index([role])
@@ -39,11 +38,31 @@ model Category {
   updatedAt     DateTime  @updatedAt
   deactivatedAt DateTime?
   videos        Video[]
+  products      Product[]
 
   @@index([slug])
   @@index([isActive])
   @@index([sortOrder])
   @@map("categories")
+}
+
+model Product {
+  id            String    @id @default(cuid())
+  externalId    String    @unique // ID do produto no AbacatePay
+  name          String
+  description   String?
+  price         Float
+  isActive      Boolean   @default(true)
+  categoryId    String?
+  category      Category? @relation(fields: [categoryId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deactivatedAt DateTime?
+
+  @@index([externalId])
+  @@index([isActive])
+  @@index([categoryId])
+  @@map("products")
 }
 
 model Video {
@@ -57,13 +76,11 @@ model Video {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deactivatedAt DateTime?
-  customerId    String
   categoryId    String?
   Category      Category? @relation(fields: [categoryId], references: [id])
-  customer      Customer  @relation(fields: [customerId], references: [id])
 
-  @@index([customerId])
   @@index([isPublished])
+  @@index([categoryId])
   @@map("videos")
 }
 
