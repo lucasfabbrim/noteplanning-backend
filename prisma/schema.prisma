@@ -95,6 +95,8 @@ model Purchase {
   customerTaxId String?
   products      Json?
   webhookData   Json?
+  paymentMethod String?
+  transactionId String?
   devMode       Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
