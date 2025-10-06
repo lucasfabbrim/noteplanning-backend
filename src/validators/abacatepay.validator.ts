@@ -41,6 +41,7 @@ export const abacatePayWebhookDataSchema = z.object({
 
 // Complete webhook body schema
 export const abacatePayWebhookBodySchema = z.object({
+  id: z.string().optional(),
   data: abacatePayWebhookDataSchema,
   products: z.array(abacatePayProductSchema).optional(),
   event: z.string().min(1, 'Event is required'),
