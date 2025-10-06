@@ -2,11 +2,13 @@ import { PrismaClient, Customer, Purchase } from '@prisma/client';
 import { BaseService } from './base.service';
 import { CustomerRepository } from '@/repositories/customer.repository';
 import { PurchaseService } from './purchase.service';
+import { EmailService } from './email.service';
 import { 
   AbacatePayWebhookBody, 
   CustomerFromWebhook 
 } from '@/validators/abacatepay.validator';
 import { LoggerHelper } from '@/utils/logger.helper';
+import { PasswordHelper } from '@/utils/password.helper';
 import crypto from 'crypto';
 
 /**
@@ -15,11 +17,13 @@ import crypto from 'crypto';
 export class AbacatePayService extends BaseService {
   protected customerRepository: CustomerRepository;
   protected purchaseService: PurchaseService;
+  protected emailService: EmailService;
 
   constructor(prisma: PrismaClient) {
     super(prisma);
     this.customerRepository = new CustomerRepository(prisma);
     this.purchaseService = new PurchaseService(prisma);
+    this.emailService = new EmailService();
   }
 
   /**
@@ -64,7 +68,8 @@ export class AbacatePayService extends BaseService {
           updatedAt: new Date(),
         });
       } else {
-        // Create new customer
+        // Create new customer with unique password
+        const randomPassword = PasswordHelper.generateUniquePassword();
         const customerInput: CustomerFromWebhook = {
           name: metadata.name,
           email: metadata.email,
@@ -76,7 +81,7 @@ export class AbacatePayService extends BaseService {
         customer = await this.customerRepository.create({
           name: customerInput.name,
           email: customerInput.email,
-          password: '', // No password for webhook-created customers
+          password: randomPassword,
           role: customerInput.role,
           isActive: true,
         });
@@ -84,6 +89,24 @@ export class AbacatePayService extends BaseService {
         LoggerHelper.info('AbacatePayService', 'processWebhook', 'Customer created', {
           customerId: customer.id,
         });
+
+        // Send welcome email with credentials
+        try {
+          await this.emailService.sendWelcomeEmail(
+            metadata.email,
+            metadata.name,
+            metadata.email,
+            randomPassword
+          );
+          
+          LoggerHelper.info('AbacatePayService', 'processWebhook', 'Welcome email sent', {
+            customerId: customer.id,
+            email: metadata.email,
+          });
+        } catch (emailError) {
+          LoggerHelper.error('AbacatePayService', 'processWebhook', 'Failed to send welcome email', emailError);
+          // Don't fail the webhook if email fails
+        }
       }
 
       // Create purchase record

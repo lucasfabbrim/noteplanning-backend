@@ -32,6 +32,9 @@ const envSchema = z.object({
 
   // AbacatePay Webhook
   ABACATEPAY_TOKEN_SECRET: z.string().min(1, 'ABACATEPAY_TOKEN_SECRET is required'),
+
+  // Email (Resend)
+  RESEND_API_KEY: z.string().min(1, 'RESEND_API_KEY is required'),
 });
 
 /**
