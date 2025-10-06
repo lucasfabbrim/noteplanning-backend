@@ -8,7 +8,8 @@ import {
   AbacatePayWebhookBody,
   AbacatePayWebhookQuery
 } from '@/validators/abacatepay.validator';
-import { env, logger } from '@/config';
+import { env } from '@/config';
+import { LoggerHelper } from '@/utils/logger.helper';
 
 /**
  * AbacatePay webhook controller
@@ -47,14 +48,13 @@ export class AbacatePayController extends BaseController {
       );
 
       if (!isValidSecret) {
-        logger.warn({
+        LoggerHelper.warn('AbacatePayController', 'handleWebhook', 'Unauthorized attempt', {
           ip: request.ip,
-          url: request.url,
-        }, 'Unauthorized webhook attempt - invalid secret');
+        });
 
         return reply.status(401).send({
           success: false,
-          message: 'Unauthorized - Invalid webhook secret',
+          message: 'Unauthorized',
         });
       }
 
@@ -62,15 +62,9 @@ export class AbacatePayController extends BaseController {
       const bodyValidation = abacatePayWebhookBodySchema.safeParse(request.body);
 
       if (!bodyValidation.success) {
-        const zodError = bodyValidation.error as any;
-        logger.warn({
-          errors: zodError.errors,
-        }, 'Invalid webhook body');
-
         return reply.status(400).send({
           success: false,
-          message: 'Invalid webhook body',
-          errors: zodError.errors,
+          message: 'Invalid request',
         });
       }
 
@@ -110,17 +104,11 @@ export class AbacatePayController extends BaseController {
         },
       });
     } catch (error) {
-      logger.error({
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        url: request.url,
-        method: request.method,
-      }, 'Failed to process webhook');
+      LoggerHelper.error('AbacatePayController', 'handleWebhook', 'Failed to process webhook', error);
 
       return reply.status(500).send({
         success: false,
         message: 'Internal server error',
-        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   }

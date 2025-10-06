@@ -216,5 +216,10 @@ async function shutdown() {
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 
-// Start the server
-start();
+// Export buildServer for testing
+export { buildServer };
+
+// Start the server only if not in test mode
+if (process.env.NODE_ENV !== 'test') {
+  start();
+}

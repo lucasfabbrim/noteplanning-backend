@@ -6,7 +6,7 @@ import {
   AbacatePayWebhookBody, 
   CustomerFromWebhook 
 } from '@/validators/abacatepay.validator';
-import { logger } from '@/config';
+import { LoggerHelper } from '@/utils/logger.helper';
 
 /**
  * AbacatePay webhook service
@@ -32,13 +32,11 @@ export class AbacatePayService extends BaseService {
       const { metadata } = customerData;
 
       // Log webhook received
-      logger.info({
-        event,
-        devMode,
+      LoggerHelper.webhook('AbacatePay', event, {
         email: metadata.email,
-        name: metadata.name,
-        products,
-      }, devMode ? '[DEV] Webhook received from AbacatePay' : 'Webhook received from AbacatePay');
+        amount: billing.amount,
+        devMode,
+      });
 
       let customer: Customer;
 
@@ -47,18 +45,16 @@ export class AbacatePayService extends BaseService {
       
       if (existingCustomer && !existingCustomer.deactivatedAt) {
         // Customer exists and is active, use existing customer
-        logger.info({
-          email: metadata.email,
-          existingCustomerId: existingCustomer.id,
-        }, 'Using existing active customer for purchase');
+        LoggerHelper.info('AbacatePayService', 'processWebhook', 'Using existing customer', {
+          customerId: existingCustomer.id,
+        });
         
         customer = existingCustomer;
       } else if (existingCustomer && existingCustomer.deactivatedAt) {
         // Customer exists but was deactivated, reactivate them
-        logger.info({
-          email: metadata.email,
+        LoggerHelper.info('AbacatePayService', 'processWebhook', 'Reactivating customer', {
           customerId: existingCustomer.id,
-        }, 'Reactivating previously deactivated customer');
+        });
 
         customer = await this.customerRepository.update(existingCustomer.id, {
           name: metadata.name,
@@ -84,13 +80,9 @@ export class AbacatePayService extends BaseService {
           isActive: true,
         });
 
-        logger.info({
+        LoggerHelper.info('AbacatePayService', 'processWebhook', 'Customer created', {
           customerId: customer.id,
-          email: customer.email,
-          name: customer.name,
-          event,
-          devMode,
-        }, 'Customer created successfully from webhook');
+        });
       }
 
       // Create purchase record
@@ -109,21 +101,15 @@ export class AbacatePayService extends BaseService {
         devMode: devMode || false,
       });
 
-      logger.info({
-        customerId: customer.id,
+      LoggerHelper.info('AbacatePayService', 'processWebhook', 'Purchase created', {
         purchaseId: purchase.id,
         amount: purchase.amount,
-        products: products,
-      }, 'Purchase created successfully from webhook');
+      });
 
       return { customer, purchase };
     } catch (error) {
-      logger.error({
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-      }, 'Failed to process webhook');
-
-      throw new Error(`Failed to process webhook: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      LoggerHelper.error('AbacatePayService', 'processWebhook', 'Failed to process webhook', error);
+      throw new Error(`Failed to process webhook`);
     }
   }
 
@@ -160,8 +146,6 @@ export class AbacatePayService extends BaseService {
   async handleWebhookEvent(webhookData: AbacatePayWebhookBody): Promise<{ customer: Customer; purchase: Purchase } | null> {
     const { event } = webhookData;
 
-    logger.info({ event }, 'Processing webhook event');
-
     switch (event) {
       case 'payment.completed':
       case 'sale.completed':
@@ -170,11 +154,11 @@ export class AbacatePayService extends BaseService {
       
       case 'payment.pending':
       case 'payment.failed':
-        logger.info({ event }, 'Webhook event received but no action taken');
+        LoggerHelper.info('AbacatePayService', 'handleWebhookEvent', 'Event ignored', { event });
         return null;
       
       default:
-        logger.warn({ event }, 'Unknown webhook event type');
+        LoggerHelper.warn('AbacatePayService', 'handleWebhookEvent', 'Unknown event type', { event });
         return null;
     }
   }

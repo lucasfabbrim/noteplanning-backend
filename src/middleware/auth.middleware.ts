@@ -2,6 +2,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { UnauthorizedError, ForbiddenError } from '@/errors';
 import jwt from 'jsonwebtoken';
 import { env } from '@/config';
+import { LoggerHelper } from '@/utils/logger.helper';
 
 /**
  * JWT authentication middleware
@@ -10,13 +11,18 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
   try {
     const token = request.headers.authorization?.replace('Bearer ', '');
     if (!token) {
-      throw new UnauthorizedError('Missing token');
+      throw new UnauthorizedError('Unauthorized');
     }
     
     const decoded = jwt.verify(token, env.JWT_SECRET) as any;
     (request as any).user = decoded;
   } catch (error) {
-    throw new UnauthorizedError('Invalid or missing token');
+    if (error instanceof jwt.JsonWebTokenError) {
+      LoggerHelper.warn('AuthMiddleware', 'authenticate', 'Invalid token', {
+        ip: request.ip,
+      });
+    }
+    throw new UnauthorizedError('Unauthorized');
   }
 }
 
@@ -28,7 +34,7 @@ export async function requireAdmin(request: FastifyRequest, reply: FastifyReply)
   
   const user = (request as any).user;
   if (user.role !== 'ADMIN') {
-    throw new ForbiddenError('Admin access required');
+    throw new ForbiddenError('Forbidden');
   }
 }
 
@@ -40,7 +46,7 @@ export async function requireMemberOrAdmin(request: FastifyRequest, reply: Fasti
   
   const user = (request as any).user;
   if (!['MEMBER', 'ADMIN'].includes(user.role)) {
-    throw new ForbiddenError('Member or Admin access required');
+    throw new ForbiddenError('Forbidden');
   }
 }
 

@@ -431,22 +431,24 @@ export async function customersRoutes(fastify: FastifyInstance) {
         expiresIn: env.JWT_EXPIRES_IN
       } as jwt.SignOptions);
       
-      // Return customer data without password
-      const { password, ...customerData } = customer;
-      
+      // Return only necessary customer data (no sensitive info)
       return reply.status(200).send({
         success: true,
         message: 'Login successful',
         data: {
-          customer: customerData,
-          token
+          token,
+          user: {
+            id: customer.id,
+            name: customer.name,
+            email: customer.email,
+            role: customer.role
+          }
         }
       });
     } catch (error) {
       return reply.status(500).send({ 
         success: false, 
-        message: 'Login failed',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        message: 'Login failed'
       });
     }
   });
@@ -506,11 +508,13 @@ export async function customersRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // POST /customers/forgot-password - Request password reset
+  // POST /customers/forgot-password - Request password reset (Admin only for security)
   fastify.post('/forgot-password', {
+    preHandler: [requireAdmin],
     schema: {
-      description: 'Request password reset token',
+      description: 'Request password reset token (Admin only)',
       tags: ['auth'],
+      security: [{ bearerAuth: [] }],
       body: {
         type: 'object',
         properties: {
@@ -538,7 +542,7 @@ export async function customersRoutes(fastify: FastifyInstance) {
         });
       }
       
-      // Generate reset token (simplified - in production use crypto)
+      // Generate reset token
       const resetToken = jwt.sign({ id: customer.id }, env.JWT_SECRET, {
         expiresIn: '1h'
       } as jwt.SignOptions);
@@ -552,8 +556,7 @@ export async function customersRoutes(fastify: FastifyInstance) {
         }
       });
       
-      // In production, send email with reset link
-      // For now, just return the token (DEV ONLY)
+      // Return token only in development
       return reply.status(200).send({
         success: true,
         message: 'Reset token generated',
@@ -567,11 +570,13 @@ export async function customersRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // POST /customers/reset-password - Reset password with token
+  // POST /customers/reset-password - Reset password with token (Admin only)
   fastify.post('/reset-password', {
+    preHandler: [requireAdmin],
     schema: {
-      description: 'Reset password using reset token',
+      description: 'Reset password using reset token (Admin only)',
       tags: ['auth'],
+      security: [{ bearerAuth: [] }],
       body: {
         type: 'object',
         properties: {
@@ -592,7 +597,7 @@ export async function customersRoutes(fastify: FastifyInstance) {
       } catch (error) {
         return reply.status(400).send({
           success: false,
-          message: 'Invalid or expired token'
+          message: 'Invalid token'
         });
       }
       
@@ -611,7 +616,7 @@ export async function customersRoutes(fastify: FastifyInstance) {
       if (!customer) {
         return reply.status(400).send({
           success: false,
-          message: 'Invalid or expired token'
+          message: 'Invalid token'
         });
       }
       
@@ -633,9 +638,9 @@ export async function customersRoutes(fastify: FastifyInstance) {
         message: 'Password reset successfully'
       });
     } catch (error) {
-      return reply.status(500).send({ 
+      return reply.status(400).send({ 
         success: false, 
-        message: 'Failed to reset password' 
+        message: 'Invalid token' 
       });
     }
   });

@@ -1,7 +1,7 @@
 import { PrismaClient, Purchase } from '@prisma/client';
 import { BaseService } from './base.service';
 import { PurchaseRepository } from '@/repositories/purchase.repository';
-import { logger } from '@/config';
+import { LoggerHelper } from '@/utils/logger.helper';
 
 /**
  * Purchase service
@@ -72,8 +72,8 @@ export class PurchaseService extends BaseService {
         },
       };
     } catch (error) {
-      logger.error({ error }, 'Failed to get purchases');
-      throw new Error(`Failed to get purchases: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      LoggerHelper.error('PurchaseService', 'getAllPurchases', 'Failed to retrieve purchases', error);
+      throw new Error(`Failed to get purchases`);
     }
   }
 
@@ -84,8 +84,8 @@ export class PurchaseService extends BaseService {
     try {
       return await this.purchaseRepository.findByIdWithCustomer(id);
     } catch (error) {
-      logger.error({ error, id }, 'Failed to get purchase by ID');
-      throw new Error(`Failed to get purchase: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      LoggerHelper.error('PurchaseService', 'getPurchaseById', 'Failed to retrieve purchase', error);
+      throw new Error(`Failed to get purchase`);
     }
   }
 
@@ -96,8 +96,8 @@ export class PurchaseService extends BaseService {
     try {
       return await this.purchaseRepository.findByCustomerId(customerId);
     } catch (error) {
-      logger.error({ error, customerId }, 'Failed to get purchases by customer ID');
-      throw new Error(`Failed to get customer purchases: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      LoggerHelper.error('PurchaseService', 'getPurchasesByCustomerId', 'Failed to retrieve purchases', error);
+      throw new Error(`Failed to get customer purchases`);
     }
   }
 
@@ -108,8 +108,8 @@ export class PurchaseService extends BaseService {
     try {
       return await this.purchaseRepository.findByCustomerEmail(email);
     } catch (error) {
-      logger.error({ error, email }, 'Failed to get purchases by customer email');
-      throw new Error(`Failed to get customer purchases: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      LoggerHelper.error('PurchaseService', 'getPurchasesByCustomerEmail', 'Failed to retrieve purchases', error);
+      throw new Error(`Failed to get customer purchases`);
     }
   }
 
@@ -120,8 +120,8 @@ export class PurchaseService extends BaseService {
     try {
       return await this.purchaseRepository.getCustomerStats(customerId);
     } catch (error) {
-      logger.error({ error, customerId }, 'Failed to get customer stats');
-      throw new Error(`Failed to get customer stats: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      LoggerHelper.error('PurchaseService', 'getCustomerStats', 'Failed to retrieve stats', error);
+      throw new Error(`Failed to get customer stats`);
     }
   }
 
@@ -143,7 +143,7 @@ export class PurchaseService extends BaseService {
 
       return hasTemplateVideos || hasVideos;
     } catch (error) {
-      logger.error({ error, customerId }, 'Failed to check video access');
+      LoggerHelper.error('PurchaseService', 'hasVideoAccess', 'Failed to check access', error);
       return false;
     }
   }
@@ -181,17 +181,15 @@ export class PurchaseService extends BaseService {
         devMode: data.devMode || false,
       } as any);
 
-      logger.info({
+      LoggerHelper.info('PurchaseService', 'createPurchase', 'Purchase created', {
         purchaseId: purchase.id,
-        customerId: purchase.customerId,
         amount: purchase.amount,
-        products: data.products,
-      }, 'Purchase created successfully');
+      });
 
       return purchase;
     } catch (error) {
-      logger.error({ error, data }, 'Failed to create purchase');
-      throw new Error(`Failed to create purchase: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      LoggerHelper.error('PurchaseService', 'createPurchase', 'Failed to create purchase', error);
+      throw new Error(`Failed to create purchase`);
     }
   }
 }

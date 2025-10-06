@@ -26,9 +26,8 @@ class DatabaseConfig {
     try {
       const prisma = DatabaseConfig.getInstance();
       await prisma.$connect();
-      console.log('✅ Database connected successfully');
     } catch (error) {
-      console.error('❌ Database connection failed:', error);
+      console.error('Database connection failed');
       process.exit(1);
     }
   }
@@ -40,9 +39,8 @@ class DatabaseConfig {
     try {
       const prisma = DatabaseConfig.getInstance();
       await prisma.$disconnect();
-      console.log('✅ Database disconnected successfully');
     } catch (error) {
-      console.error('❌ Database disconnection failed:', error);
+      // Silent disconnect error
     }
   }
 
@@ -55,7 +53,6 @@ class DatabaseConfig {
       await prisma.$queryRaw`SELECT 1`;
       return true;
     } catch (error) {
-      console.error('❌ Database health check failed:', error);
       return false;
     }
   }
