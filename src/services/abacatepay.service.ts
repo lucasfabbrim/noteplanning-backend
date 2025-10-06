@@ -9,6 +9,7 @@ import {
 } from '@/validators/abacatepay.validator';
 import { LoggerHelper } from '@/utils/logger.helper';
 import { PasswordHelper } from '@/utils/password.helper';
+import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 
 /**
@@ -70,6 +71,8 @@ export class AbacatePayService extends BaseService {
       } else {
         // Create new customer with unique password
         const randomPassword = PasswordHelper.generateUniquePassword();
+        const hashedPassword = await bcrypt.hash(randomPassword, 10);
+        
         const customerInput: CustomerFromWebhook = {
           name: metadata.name,
           email: metadata.email,
@@ -81,7 +84,7 @@ export class AbacatePayService extends BaseService {
         customer = await this.customerRepository.create({
           name: customerInput.name,
           email: customerInput.email,
-          password: randomPassword,
+          password: hashedPassword,
           role: customerInput.role,
           isActive: true,
         });
