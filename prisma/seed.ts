@@ -48,6 +48,58 @@ async function main() {
 
   console.log('✅ Sample customers created');
 
+  // Create sample categories
+  const category1 = await prisma.category.upsert({
+    where: { slug: 'programming-basics' },
+    update: {},
+    create: {
+      name: 'Programming Basics',
+      description: 'Learn the fundamentals of programming',
+      slug: 'programming-basics',
+      sortOrder: 1,
+    },
+  });
+
+  const category2 = await prisma.category.upsert({
+    where: { slug: 'advanced-topics' },
+    update: {},
+    create: {
+      name: 'Advanced Topics',
+      description: 'Advanced programming concepts and techniques',
+      slug: 'advanced-topics',
+      sortOrder: 2,
+    },
+  });
+
+  console.log('✅ Sample categories created');
+
+  // Create sample products
+  const product1 = await prisma.product.upsert({
+    where: { externalId: 'prod_basic' },
+    update: {},
+    create: {
+      externalId: 'prod_basic',
+      name: 'Basic Programming Course',
+      description: 'Access to basic programming videos',
+      price: 29.99,
+      categoryId: category1.id,
+    },
+  });
+
+  const product2 = await prisma.product.upsert({
+    where: { externalId: 'prod_advanced' },
+    update: {},
+    create: {
+      externalId: 'prod_advanced',
+      name: 'Advanced Programming Course',
+      description: 'Access to advanced programming videos',
+      price: 59.99,
+      categoryId: category2.id,
+    },
+  });
+
+  console.log('✅ Sample products created');
+
   // Create sample videos
   const video1 = await prisma.video.create({
     data: {
@@ -57,7 +109,7 @@ async function main() {
       thumbnail: 'https://example.com/thumbnails/nodejs-intro.jpg',
       duration: 1800, // 30 minutes
       isPublished: true,
-      customerId: customer1.id,
+      categoryId: category1.id,
     },
   });
 
@@ -69,7 +121,7 @@ async function main() {
       thumbnail: 'https://example.com/thumbnails/typescript-advanced.jpg',
       duration: 2400, // 40 minutes
       isPublished: true,
-      customerId: customer2.id,
+      categoryId: category2.id,
     },
   });
 
@@ -87,6 +139,32 @@ async function main() {
   });
 
   console.log('✅ Sample membership created');
+
+  // Create sample purchase
+  const purchase = await prisma.purchase.create({
+    data: {
+      customerId: customer2.id,
+      amount: 29.99,
+      paymentAmount: 29.99,
+      event: 'billing.paid',
+      status: 'completed',
+      customerName: customer2.name,
+      customerEmail: customer2.email,
+      customerPhone: '11999999999',
+      customerTaxId: '12345678901',
+      products: [
+        {
+          id: product1.id,
+          externalId: product1.externalId,
+          name: product1.name,
+          price: product1.price,
+          quantity: 1,
+        },
+      ],
+    },
+  });
+
+  console.log('✅ Sample purchase created');
 
   console.log('🎉 Database seeding completed successfully!');
 }

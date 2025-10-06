@@ -123,7 +123,7 @@ export class AbacatePayService extends BaseService {
             const createdProduct = await this.productService.createOrUpdateProduct({
               externalId: product.externalId || product.id || 'unknown',
               name: product.name,
-              description: product.description,
+              description: product.description || '',
               price: product.price || billing.amount,
             });
             processedProducts.push(createdProduct);

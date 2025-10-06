@@ -20,12 +20,12 @@ export class VideoRepository extends BaseRepository<Video> {
    * Find all videos with pagination and filters
    */
   async findAll(query: VideoQuery) {
-    const { page, limit, search, isPublished, customerId, minDuration, maxDuration } = query;
+    const { page, limit, search, isPublished, categoryId, minDuration, maxDuration } = query;
 
     const where: Prisma.VideoWhereInput = {
       deactivatedAt: null,
       ...(isPublished !== undefined && { isPublished }),
-      ...(customerId && { customerId }),
+      ...(categoryId && { categoryId }),
       ...(search && {
         OR: [
           { title: { contains: search, mode: 'insensitive' } },
@@ -64,30 +64,23 @@ export class VideoRepository extends BaseRepository<Video> {
   /**
    * Find video by ID
    */
-  async findById(id: string): Promise<VideoWithCustomer | null> {
+  async findById(id: string): Promise<any | null> {
     return this.prisma.video.findFirst({
       where: {
         id,
         deactivatedAt: null,
       },
       include: {
-        customer: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-          },
-        },
+        Category: true,
       },
     });
   }
 
   /**
-   * Find videos by customer ID
+   * Find videos by category ID
    */
-  async findByCustomerId(customerId: string, query: Omit<VideoQuery, 'customerId'>) {
-    return this.findAll({ ...query, customerId });
+  async findByCategoryId(categoryId: string, query: Omit<VideoQuery, 'categoryId'>) {
+    return this.findAll({ ...query, categoryId });
   }
 
   /**
@@ -148,9 +141,9 @@ export class VideoRepository extends BaseRepository<Video> {
         where: { deactivatedAt: null, isPublished: false },
       }),
       this.prisma.video.groupBy({
-        by: ['customerId'],
+        by: ['categoryId'],
         where: { deactivatedAt: null },
-        _count: { customerId: true },
+        _count: { categoryId: true },
       }),
     ]);
 

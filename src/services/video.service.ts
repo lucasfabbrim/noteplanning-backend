@@ -6,7 +6,7 @@ import {
   UpdateVideoInput,
   VideoQuery,
   VideoResponse,
-  VideoWithCustomer,
+  VideoWithCategory,
 } from '@/validators';
 
 export class VideoService extends BaseService {
@@ -52,7 +52,7 @@ export class VideoService extends BaseService {
   /**
    * Get video by ID
    */
-  async getVideoById(id: string): Promise<VideoWithCustomer> {
+  async getVideoById(id: string): Promise<VideoWithCategory> {
     try {
       const video = await this.videoRepository.findById(id);
       if (!video) {
@@ -65,18 +65,18 @@ export class VideoService extends BaseService {
   }
 
   /**
-   * Get videos by customer ID
+   * Get videos by category ID
    */
-  async getVideosByCustomerId(customerId: string, query: Omit<VideoQuery, 'customerId'>) {
+  async getVideosByCategoryId(categoryId: string, query: Omit<VideoQuery, 'categoryId'>) {
     try {
-      const result = await this.videoRepository.findByCustomerId(customerId, query);
+      const result = await this.videoRepository.findByCategoryId(categoryId, query);
       return {
         success: true,
         data: result.data,
         pagination: result.pagination,
       };
     } catch (error) {
-      throw new Error(`Failed to get customer videos: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`Failed to get category videos: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -96,7 +96,7 @@ export class VideoService extends BaseService {
           thumbnail: data.thumbnail,
           duration: data.duration,
           isPublished: data.isPublished,
-          customerId: data.customerId,
+          categoryId: data.categoryId,
         },
       });
 
@@ -119,20 +119,20 @@ export class VideoService extends BaseService {
         throw new Error('Video not found');
       }
 
-      // Validate customer if provided
-      if (data.customerId) {
+      // Validate category if provided
+      if (data.categoryId) {
         await this.validateRecordExists(
-          this.prisma.customer,
-          data.customerId,
-          'Customer not found'
+          this.prisma.category,
+          data.categoryId,
+          'Category not found'
         );
       }
 
       // Prepare update data
       const updateData: any = { ...data };
-      if (data.customerId) {
-        updateData.customer = { connect: { id: data.customerId } };
-        delete updateData.customerId;
+      if (data.categoryId) {
+        updateData.category = { connect: { id: data.categoryId } };
+        delete updateData.categoryId;
       }
 
       // Update video

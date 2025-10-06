@@ -81,16 +81,12 @@ export async function customersRoutes(fastify: FastifyInstance) {
               planType: true
             }
           },
-          videos: {
+          purchases: {
             where: { deactivatedAt: null },
             select: {
               id: true,
-              title: true,
-              description: true,
-              url: true,
-              thumbnail: true,
-              duration: true,
-              isPublished: true,
+              amount: true,
+              status: true,
               createdAt: true
             }
           }

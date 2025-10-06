@@ -18,6 +18,7 @@ export const abacatePayProductSchema = z.object({
   externalId: z.string().optional(),
   quantity: z.number().optional(),
   name: z.string().optional(),
+  description: z.string().optional(),
   price: z.number().optional(),
 });
 

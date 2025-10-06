@@ -18,13 +18,7 @@ export class VideoController extends BaseController {
       const videos = await this.prisma.video.findMany({
         where: { deactivatedAt: null },
         include: {
-          customer: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
+          Category: true,
         },
         orderBy: { createdAt: 'desc' },
       });
@@ -50,16 +44,10 @@ export class VideoController extends BaseController {
           thumbnail: body.thumbnail,
           duration: body.duration,
           isPublished: body.isPublished,
-          customerId: body.customerId,
+          categoryId: body.categoryId,
         },
         include: {
-          customer: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
+          Category: true,
         },
       });
 
@@ -82,13 +70,7 @@ export class VideoController extends BaseController {
           deactivatedAt: null,
         },
         include: {
-          customer: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
+          Category: true,
         },
       });
 
@@ -121,13 +103,7 @@ export class VideoController extends BaseController {
           isPublished: body.isPublished,
         },
         include: {
-          customer: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
+          Category: true,
         },
       });
 

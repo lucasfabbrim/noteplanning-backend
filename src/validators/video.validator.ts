@@ -8,16 +8,14 @@ export const videoBaseSchema = z.object({
   thumbnail: z.string().url('Invalid thumbnail URL format').optional(),
   duration: z.number().int().positive('Duration must be a positive integer').optional(),
   isPublished: z.boolean().default(false),
-  customerId: z.string().cuid('Invalid customer ID format'),
+  categoryId: z.string().cuid('Invalid category ID format').optional(),
 });
 
 // Create video schema
 export const createVideoSchema = videoBaseSchema;
 
-// Update video schema (all fields optional except customerId)
-export const updateVideoSchema = videoBaseSchema.partial().extend({
-  customerId: z.string().cuid('Invalid customer ID format').optional(),
-});
+// Update video schema (all fields optional)
+export const updateVideoSchema = videoBaseSchema.partial();
 
 // Video response schema
 export const videoResponseSchema = z.object({
@@ -31,17 +29,16 @@ export const videoResponseSchema = z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   deactivatedAt: z.date().nullable(),
-  customerId: z.string(),
+  categoryId: z.string().nullable(),
 });
 
-// Video with customer relation schema
-export const videoWithCustomerSchema = videoResponseSchema.extend({
-  customer: z.object({
+// Video with category relation schema
+export const videoWithCategorySchema = videoResponseSchema.extend({
+  Category: z.object({
     id: z.string(),
     name: z.string(),
-    email: z.string(),
-    role: z.enum(['FREE', 'MEMBER', 'ADMIN']),
-  }),
+    slug: z.string(),
+  }).nullable(),
 });
 
 // Query parameters schema
@@ -50,7 +47,7 @@ export const videoQuerySchema = z.object({
   limit: z.string().optional().transform((val) => val ? parseInt(val, 10) : 10),
   search: z.string().optional(),
   isPublished: z.string().optional().transform((val) => val === 'true'),
-  customerId: z.string().cuid().optional(),
+  categoryId: z.string().cuid().optional(),
   minDuration: z.string().optional().transform((val) => val ? parseInt(val, 10) : undefined),
   maxDuration: z.string().optional().transform((val) => val ? parseInt(val, 10) : undefined),
 });
@@ -64,6 +61,6 @@ export const videoParamsSchema = z.object({
 export type CreateVideoInput = z.infer<typeof createVideoSchema>;
 export type UpdateVideoInput = z.infer<typeof updateVideoSchema>;
 export type VideoResponse = z.infer<typeof videoResponseSchema>;
-export type VideoWithCustomer = z.infer<typeof videoWithCustomerSchema>;
+export type VideoWithCategory = z.infer<typeof videoWithCategorySchema>;
 export type VideoQuery = z.infer<typeof videoQuerySchema>;
 export type VideoParams = z.infer<typeof videoParamsSchema>;

@@ -4,7 +4,7 @@ import { CustomerQuery } from '@/validators';
 
 export interface CustomerWithRelations extends Customer {
   memberships?: any[];
-  videos?: any[];
+  purchases?: any[];
 }
 
 export class CustomerRepository extends BaseRepository<Customer> {
@@ -52,7 +52,7 @@ export class CustomerRepository extends BaseRepository<Customer> {
           where: { deactivatedAt: null },
           orderBy: { createdAt: 'desc' },
         },
-        videos: {
+        purchases: {
           where: { deactivatedAt: null },
           orderBy: { createdAt: 'desc' },
         },
