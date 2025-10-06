@@ -62,6 +62,10 @@ async function buildServer() {
             url: 'http://localhost:3000',
             description: 'Development server',
           },
+          {
+            url: 'https://noteplanning-backend.fly.dev',
+            description: 'Production server',
+          },
         ],
         components: {
           securitySchemes: {
