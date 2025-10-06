@@ -505,4 +505,138 @@ export async function customersRoutes(fastify: FastifyInstance) {
       });
     }
   });
+
+  // POST /customers/forgot-password - Request password reset
+  fastify.post('/forgot-password', {
+    schema: {
+      description: 'Request password reset token',
+      tags: ['auth'],
+      body: {
+        type: 'object',
+        properties: {
+          email: { type: 'string', format: 'email' }
+        },
+        required: ['email']
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const body = request.body as { email: string };
+      
+      const customer = await prisma.customer.findFirst({
+        where: { 
+          email: body.email,
+          deactivatedAt: null 
+        }
+      });
+      
+      // Always return success even if email doesn't exist (security best practice)
+      if (!customer) {
+        return reply.status(200).send({
+          success: true,
+          message: 'If the email exists, a reset token has been generated'
+        });
+      }
+      
+      // Generate reset token (simplified - in production use crypto)
+      const resetToken = jwt.sign({ id: customer.id }, env.JWT_SECRET, {
+        expiresIn: '1h'
+      } as jwt.SignOptions);
+      
+      // Set reset token and expiration
+      await prisma.customer.update({
+        where: { id: customer.id },
+        data: {
+          resetPasswordToken: resetToken,
+          resetPasswordExpires: new Date(Date.now() + 3600000) // 1 hour
+        }
+      });
+      
+      // In production, send email with reset link
+      // For now, just return the token (DEV ONLY)
+      return reply.status(200).send({
+        success: true,
+        message: 'Reset token generated',
+        resetToken: env.NODE_ENV === 'development' ? resetToken : undefined
+      });
+    } catch (error) {
+      return reply.status(500).send({ 
+        success: false, 
+        message: 'Failed to process password reset request' 
+      });
+    }
+  });
+
+  // POST /customers/reset-password - Reset password with token
+  fastify.post('/reset-password', {
+    schema: {
+      description: 'Reset password using reset token',
+      tags: ['auth'],
+      body: {
+        type: 'object',
+        properties: {
+          token: { type: 'string' },
+          newPassword: { type: 'string', minLength: 6 }
+        },
+        required: ['token', 'newPassword']
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const body = request.body as { token: string; newPassword: string };
+      
+      // Verify token
+      let decoded: any;
+      try {
+        decoded = jwt.verify(body.token, env.JWT_SECRET);
+      } catch (error) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Invalid or expired token'
+        });
+      }
+      
+      // Find customer with valid reset token
+      const customer = await prisma.customer.findFirst({
+        where: {
+          id: decoded.id,
+          resetPasswordToken: body.token,
+          resetPasswordExpires: {
+            gte: new Date()
+          },
+          deactivatedAt: null
+        }
+      });
+      
+      if (!customer) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Invalid or expired token'
+        });
+      }
+      
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(body.newPassword, 10);
+      
+      // Update password and clear reset token
+      await prisma.customer.update({
+        where: { id: customer.id },
+        data: {
+          password: hashedPassword,
+          resetPasswordToken: null,
+          resetPasswordExpires: null
+        }
+      });
+      
+      return reply.status(200).send({
+        success: true,
+        message: 'Password reset successfully'
+      });
+    } catch (error) {
+      return reply.status(500).send({ 
+        success: false, 
+        message: 'Failed to reset password' 
+      });
+    }
+  });
 }

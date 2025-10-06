@@ -6,9 +6,9 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting database seeding...');
 
-  // Create admin user
+  // Create admin customer (customer with ADMIN role)
   const adminPassword = await bcrypt.hash('admin123', 10);
-  const admin = await prisma.admin.upsert({
+  const admin = await prisma.customer.upsert({
     where: { email: 'admin@example.com' },
     update: {},
     create: {
@@ -19,7 +19,7 @@ async function main() {
     },
   });
 
-  console.log('✅ Admin user created:', admin.email);
+  console.log('✅ Admin customer created:', admin.email);
 
   // Create sample customers
   const customer1Password = await bcrypt.hash('customer123', 10);

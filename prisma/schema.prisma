@@ -26,6 +26,10 @@ model Customer {
   role          Role      @default(FREE)
   isActive      Boolean   @default(true)
   
+  // Password reset
+  resetPasswordToken   String?
+  resetPasswordExpires DateTime?
+  
   // Audit fields
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -37,6 +41,8 @@ model Customer {
   purchases     Purchase[]
   
   @@map("customers")
+  @@index([email])
+  @@index([role])
 }
 
 // Video model
@@ -79,23 +85,6 @@ model Membership {
   customer    Customer  @relation(fields: [customerId], references: [id])
   
   @@map("memberships")
-}
-
-// Admin model
-model Admin {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String
-  password      String
-  role          Role      @default(ADMIN)
-  isActive      Boolean   @default(true)
-  
-  // Audit fields
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  deactivatedAt DateTime?
-  
-  @@map("admins")
 }
 
 // Purchase model (histórico de compras)

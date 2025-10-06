@@ -9,7 +9,6 @@ import { errorHandler } from '@/middleware';
 import { customersRoutes } from '@/routes/customers.routes';
 import { videosRoutes } from '@/routes/videos.routes';
 import { membershipsRoutes } from '@/routes/memberships.routes';
-import { adminsRoutes } from '@/routes/admins.routes';
 import { abacatePayRoutes } from '@/routes/abacatepay.routes';
 import { purchasesRoutes } from '@/routes/purchases.routes';
 
@@ -74,7 +73,6 @@ async function buildServer() {
           { name: 'customers', description: 'Customer management endpoints' },
           { name: 'videos', description: 'Video management endpoints' },
           { name: 'memberships', description: 'Membership management endpoints' },
-          { name: 'admins', description: 'Admin management endpoints' },
           { name: 'auth', description: 'Authentication endpoints' },
           { name: 'webhooks', description: 'Webhook endpoints' },
           { name: 'purchases', description: 'Purchase history endpoints' },
@@ -139,7 +137,6 @@ async function buildServer() {
     await fastify.register(customersRoutes, { prefix: '/api/customers' });
     await fastify.register(videosRoutes, { prefix: '/api/videos' });
     await fastify.register(membershipsRoutes, { prefix: '/api/memberships' });
-    await fastify.register(adminsRoutes, { prefix: '/api/admins' });
     await fastify.register(purchasesRoutes, { prefix: '/api/purchases' });
     await fastify.register(abacatePayRoutes, { prefix: '/webhook' });
 

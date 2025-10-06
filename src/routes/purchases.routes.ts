@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { PurchaseController } from '@/controllers/purchase.controller';
 import { prisma } from '@/config';
-import { requireAdmin } from '@/middleware';
+import { requireAdmin, authenticate } from '@/middleware';
 
 /**
  * Purchase routes
@@ -50,6 +50,40 @@ export async function purchasesRoutes(fastify: FastifyInstance) {
     },
   }, async (request, reply) => {
     return purchaseController.getPurchaseById(request, reply);
+  });
+
+  // GET /purchases/my-purchases - Get own purchases (Customer + Admin)
+  fastify.get('/my-purchases', {
+    preHandler: [authenticate],
+    schema: {
+      description: 'Get your own purchases',
+      tags: ['purchases'],
+      security: [{ bearerAuth: [] }],
+    },
+  }, async (request, reply) => {
+    try {
+      const user = (request as any).user;
+      const purchases = await prisma.purchase.findMany({
+        where: {
+          customerId: user.id,
+          deactivatedAt: null,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+      
+      return reply.status(200).send({
+        success: true,
+        message: 'Purchases retrieved successfully',
+        data: purchases,
+      });
+    } catch (error) {
+      return reply.status(500).send({
+        success: false,
+        message: 'Failed to get purchases',
+      });
+    }
   });
 
   // GET /purchases/customer/:customerId - Get purchases by customer ID (Admin only)
