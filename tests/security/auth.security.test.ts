@@ -526,7 +526,11 @@ describe('Authentication Security Tests', () => {
       });
 
       expect(response.headers).not.toHaveProperty('x-powered-by');
-      expect(response.headers.server).not.toContain('Express');
+      
+      // Check if server header exists before testing its content
+      if (response.headers.server) {
+        expect(response.headers.server).not.toContain('Express');
+      }
     });
   });
 });
