@@ -90,6 +90,7 @@ export class AbacatePayService extends BaseService {
       const purchase = await this.purchaseService.createPurchase({
         customerId: customer.id,
         amount: billing.amount,
+        paymentAmount: payment?.amount || billing.amount,
         status: this.mapEventToStatus(event),
         products: products || [],
         paymentMethod: 'abacatepay',

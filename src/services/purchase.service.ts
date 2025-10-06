@@ -144,6 +144,7 @@ export class PurchaseService extends BaseService {
   async createPurchase(data: {
     customerId: string;
     amount: number;
+    paymentAmount: number;
     status: string;
     products: any[];
     paymentMethod: string;
@@ -155,6 +156,7 @@ export class PurchaseService extends BaseService {
       const purchase = await this.purchaseRepository.create({
         customerId: data.customerId,
         amount: data.amount,
+        paymentAmount: data.paymentAmount,
         status: data.status,
         products: data.products,
         paymentMethod: data.paymentMethod,
