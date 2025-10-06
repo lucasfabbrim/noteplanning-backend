@@ -387,71 +387,7 @@ export async function customersRoutes(fastify: FastifyInstance) {
       description: 'Authenticate customer',
       tags: ['customers', 'auth']
     }
-  }, async (request, reply) => {
-    try {
-      const body = request.body as { email: string; password: string };
-      
-      // Find customer
-      const customer = await prisma.customer.findFirst({
-        where: { 
-          email: body.email,
-          deactivatedAt: null 
-        }
-      });
-      
-      if (!customer) {
-        return reply.status(401).send({ 
-          success: false, 
-          message: 'Invalid credentials' 
-        });
-      }
-      
-      // Check password
-      const isPasswordValid = await bcrypt.compare(body.password, customer.password);
-      if (!isPasswordValid) {
-        return reply.status(401).send({ 
-          success: false, 
-          message: 'Invalid credentials' 
-        });
-      }
-      
-      if (!customer.isActive) {
-        return reply.status(401).send({ 
-          success: false, 
-          message: 'Account is deactivated' 
-        });
-      }
-      
-      // Generate JWT token
-      const token = jwt.sign({
-        id: customer.id,
-        email: customer.email,
-        role: customer.role
-      }, env.JWT_SECRET, {
-        expiresIn: env.JWT_EXPIRES_IN
-      } as jwt.SignOptions);
-      
-      // Return only necessary customer data (no sensitive info)
-      return reply.status(200).send({
-        success: true,
-        message: 'Login successful',
-        data: {
-          token,
-          user: {
-            id: customer.id,
-            name: customer.name,
-            email: customer.email,
-            role: customer.role
-          }
-        }
-      });
-    } catch (error) {
-      return reply.status(500).send({ 
-        success: false, 
-        message: 'Login failed'
-      });
-    }
-  });
+  }, customerController.loginCustomer.bind(customerController));
 
   // GET /customers/stats - Get customer statistics (Admin only)
   fastify.get('/stats', {

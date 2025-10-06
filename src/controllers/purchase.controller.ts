@@ -1,135 +1,130 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { BaseController } from './base.controller';
-import { PurchaseService } from '@/services/purchase.service';
 
-/**
- * Purchase controller
- */
 export class PurchaseController extends BaseController {
-  protected purchaseService: PurchaseService;
+  private prisma: PrismaClient;
 
   constructor(prisma: PrismaClient) {
     super();
-    this.purchaseService = new PurchaseService(prisma);
+    this.prisma = prisma;
   }
 
   /**
-   * GET /purchases - Get all purchases with pagination and filters (Admin only)
+   * GET /purchases - Get all purchases
    */
   async getAllPurchases(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const query = request.query as any;
-      const result = await this.purchaseService.getAllPurchases(query);
-      
-      return reply.status(200).send({
-        success: true,
-        message: 'Purchases retrieved successfully',
-        data: result.data,
-        pagination: result.pagination,
+      const purchases = await this.prisma.purchase.findMany({
+        where: { deactivatedAt: null },
+        include: {
+          customer: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
       });
+
+      return this.sendSuccess(reply, purchases, 'Purchases retrieved successfully');
     } catch (error) {
       return this.handleServiceError(reply, error);
     }
   }
 
   /**
-   * GET /purchases/:id - Get purchase by ID (Admin only)
+   * GET /purchases/:id - Get purchase by ID
    */
   async getPurchaseById(request: FastifyRequest, reply: FastifyReply) {
     try {
       const params = request.params as { id: string };
-      const purchase = await this.purchaseService.getPurchaseById(params.id);
       
-      if (!purchase) {
-        return reply.status(404).send({
-          success: false,
-          message: 'Purchase not found',
-        });
-      }
-      
-      return reply.status(200).send({
-        success: true,
-        message: 'Purchase found',
-        data: purchase,
-      });
-    } catch (error) {
-      return this.handleServiceError(reply, error);
-    }
-  }
-
-  /**
-   * GET /purchases/customer/:customerId - Get purchases by customer ID
-   */
-  async getPurchasesByCustomerId(request: FastifyRequest, reply: FastifyReply) {
-    try {
-      const params = request.params as { customerId: string };
-      const purchases = await this.purchaseService.getPurchasesByCustomerId(params.customerId);
-      
-      return reply.status(200).send({
-        success: true,
-        message: 'Purchases retrieved successfully',
-        data: purchases,
-      });
-    } catch (error) {
-      return this.handleServiceError(reply, error);
-    }
-  }
-
-  /**
-   * GET /purchases/email/:email - Get purchases by customer email
-   */
-  async getPurchasesByEmail(request: FastifyRequest, reply: FastifyReply) {
-    try {
-      const params = request.params as { email: string };
-      const purchases = await this.purchaseService.getPurchasesByCustomerEmail(params.email);
-      
-      return reply.status(200).send({
-        success: true,
-        message: 'Purchases retrieved successfully',
-        data: purchases,
-      });
-    } catch (error) {
-      return this.handleServiceError(reply, error);
-    }
-  }
-
-  /**
-   * GET /purchases/customer/:customerId/stats - Get customer purchase statistics
-   */
-  async getCustomerStats(request: FastifyRequest, reply: FastifyReply) {
-    try {
-      const params = request.params as { customerId: string };
-      const stats = await this.purchaseService.getCustomerStats(params.customerId);
-      
-      return reply.status(200).send({
-        success: true,
-        message: 'Customer statistics retrieved successfully',
-        data: stats,
-      });
-    } catch (error) {
-      return this.handleServiceError(reply, error);
-    }
-  }
-
-  /**
-   * GET /purchases/customer/:customerId/video-access - Check if customer has video access
-   */
-  async checkVideoAccess(request: FastifyRequest, reply: FastifyReply) {
-    try {
-      const params = request.params as { customerId: string };
-      const hasAccess = await this.purchaseService.hasVideoAccess(params.customerId);
-      
-      return reply.status(200).send({
-        success: true,
-        message: hasAccess ? 'Customer has video access' : 'Customer does not have video access',
-        data: {
-          hasAccess,
+      const purchase = await this.prisma.purchase.findFirst({
+        where: {
+          id: params.id,
+          deactivatedAt: null,
+        },
+        include: {
+          customer: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
         },
       });
+
+      if (!purchase) {
+        return this.sendError(reply, 'Purchase not found', 404);
+      }
+
+      return this.sendSuccess(reply, purchase, 'Purchase retrieved successfully');
+    } catch (error) {
+      return this.handleServiceError(reply, error);
+    }
+  }
+
+  /**
+   * GET /purchases/my-purchases - Get user's own purchases
+   */
+  async getMyPurchases(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const user = this.getUserFromRequest(request);
+      
+      const purchases = await this.prisma.purchase.findMany({
+        where: {
+          customerId: user.id,
+          deactivatedAt: null,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      return this.sendSuccess(reply, purchases, 'Your purchases retrieved successfully');
+    } catch (error) {
+      return this.handleServiceError(reply, error);
+    }
+  }
+
+  /**
+   * POST /purchases - Create a new purchase
+   */
+  async createPurchase(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const body = request.body as any;
+      
+      const purchase = await this.prisma.purchase.create({
+        data: {
+          customerId: body.customerId,
+          amount: body.amount,
+          paymentAmount: body.paymentAmount || body.amount,
+          event: body.event || 'payment.completed',
+          status: body.status || 'completed',
+          customerName: body.customerName,
+          customerEmail: body.customerEmail,
+          customerPhone: body.customerPhone,
+          customerTaxId: body.customerTaxId,
+          products: body.products,
+          webhookData: body.webhookData,
+          devMode: body.devMode || false,
+        },
+        include: {
+          customer: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      });
+
+      return this.sendCreated(reply, purchase, 'Purchase created successfully');
     } catch (error) {
       return this.handleServiceError(reply, error);
     }
   }
 }
-

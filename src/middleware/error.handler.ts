@@ -43,6 +43,9 @@ export async function errorHandler(error: FastifyError, request: FastifyRequest,
   } else if ((error as any).statusCode) {
     statusCode = (error as any).statusCode;
     message = (error as any).message;
+  } else if (error.message && error.message.includes('Cannot read properties of undefined')) {
+    statusCode = 500;
+    message = 'Internal server error';
   }
 
   // Send error response (minimal in production)
@@ -59,7 +62,13 @@ export async function errorHandler(error: FastifyError, request: FastifyRequest,
     if (details) {
       response.details = details;
     }
+    
+    // Add stack trace in development
+    if (error.stack) {
+      response.stack = error.stack;
+    }
   }
 
-  return reply.status(statusCode).send(response);
+  reply.code(statusCode);
+  return reply.send(response);
 }

@@ -60,7 +60,21 @@ export class PurchaseService extends BaseService {
         filters.endDate = new Date(params.endDate);
       }
 
-      const result = await this.purchaseRepository.findAllWithFilters(filters);
+      const result = await this.purchaseRepository.findAllWithFilters({
+        page: filters.page,
+        limit: filters.limit,
+        status: filters.status,
+        customerId: filters.customerId,
+        customerEmail: filters.customerEmail,
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+      });
+      
+      LoggerHelper.info('PurchaseService', 'getAllPurchases', 'Purchases retrieved', {
+        count: result.data.length,
+        page: filters.page,
+        limit: filters.limit,
+      });
 
       return {
         data: result.data,
@@ -72,7 +86,7 @@ export class PurchaseService extends BaseService {
         },
       };
     } catch (error) {
-      LoggerHelper.error('PurchaseService', 'getAllPurchases', 'Failed to retrieve purchases', error);
+      LoggerHelper.error('PurchaseService', 'getAllPurchases', 'Failed to get purchases', error);
       throw new Error(`Failed to get purchases`);
     }
   }
@@ -80,12 +94,25 @@ export class PurchaseService extends BaseService {
   /**
    * Get purchase by ID
    */
-  async getPurchaseById(id: string): Promise<Purchase | null> {
+  async getPurchaseById(id: string): Promise<Purchase> {
     try {
-      return await this.purchaseRepository.findByIdWithCustomer(id);
+      const purchase = await this.purchaseRepository.findById(id);
+      
+      if (!purchase) {
+        throw new Error('Purchase not found');
+      }
+
+      LoggerHelper.info('PurchaseService', 'getPurchaseById', 'Purchase retrieved', {
+        purchaseId: id,
+      });
+
+      return purchase;
     } catch (error) {
-      LoggerHelper.error('PurchaseService', 'getPurchaseById', 'Failed to retrieve purchase', error);
-      throw new Error(`Failed to get purchase`);
+      LoggerHelper.error('PurchaseService', 'getPurchaseById', 'Failed to get purchase', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        purchaseId: id,
+      });
+      throw error;
     }
   }
 
@@ -94,74 +121,33 @@ export class PurchaseService extends BaseService {
    */
   async getPurchasesByCustomerId(customerId: string): Promise<Purchase[]> {
     try {
-      return await this.purchaseRepository.findByCustomerId(customerId);
-    } catch (error) {
-      LoggerHelper.error('PurchaseService', 'getPurchasesByCustomerId', 'Failed to retrieve purchases', error);
-      throw new Error(`Failed to get customer purchases`);
-    }
-  }
-
-  /**
-   * Get purchases by customer email
-   */
-  async getPurchasesByCustomerEmail(email: string): Promise<Purchase[]> {
-    try {
-      return await this.purchaseRepository.findByCustomerEmail(email);
-    } catch (error) {
-      LoggerHelper.error('PurchaseService', 'getPurchasesByCustomerEmail', 'Failed to retrieve purchases', error);
-      throw new Error(`Failed to get customer purchases`);
-    }
-  }
-
-  /**
-   * Get customer purchase statistics
-   */
-  async getCustomerStats(customerId: string): Promise<any> {
-    try {
-      return await this.purchaseRepository.getCustomerStats(customerId);
-    } catch (error) {
-      LoggerHelper.error('PurchaseService', 'getCustomerStats', 'Failed to retrieve stats', error);
-      throw new Error(`Failed to get customer stats`);
-    }
-  }
-
-  /**
-   * Check if customer has access to videos (purchased template+videos)
-   */
-  async hasVideoAccess(customerId: string): Promise<boolean> {
-    try {
-      // Check if customer has purchased product containing "template" or "video"
-      const hasTemplateVideos = await this.purchaseRepository.hasProductPurchase(
-        customerId,
-        'template'
-      );
+      const purchases = await this.purchaseRepository.findByCustomerId(customerId);
       
-      const hasVideos = await this.purchaseRepository.hasProductPurchase(
+      LoggerHelper.info('PurchaseService', 'getPurchasesByCustomerId', 'Customer purchases retrieved', {
         customerId,
-        'video'
-      );
+        count: purchases.length,
+      });
 
-      return hasTemplateVideos || hasVideos;
+      return purchases;
     } catch (error) {
-      LoggerHelper.error('PurchaseService', 'hasVideoAccess', 'Failed to check access', error);
-      return false;
+      LoggerHelper.error('PurchaseService', 'getPurchasesByCustomerId', 'Failed to get customer purchases', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        customerId,
+      });
+      throw error;
     }
   }
 
   /**
-   * Create a new purchase (used by webhook)
+   * Create a new purchase
    */
   async createPurchase(data: {
     customerId: string;
     amount: number;
-    paymentAmount: number;
-    event: string;
     status: string;
-    customerName: string;
-    customerEmail: string;
-    customerPhone?: string;
-    customerTaxId?: string;
-    products?: any[];
+    products: any[];
+    paymentMethod: string;
+    transactionId: string;
     webhookData?: any;
     devMode?: boolean;
   }): Promise<Purchase> {
@@ -169,14 +155,10 @@ export class PurchaseService extends BaseService {
       const purchase = await this.purchaseRepository.create({
         customerId: data.customerId,
         amount: data.amount,
-        paymentAmount: data.paymentAmount,
-        event: data.event,
         status: data.status,
-        customerName: data.customerName,
-        customerEmail: data.customerEmail,
-        customerPhone: data.customerPhone,
-        customerTaxId: data.customerTaxId,
-        products: data.products || [],
+        products: data.products,
+        paymentMethod: data.paymentMethod,
+        transactionId: data.transactionId,
         webhookData: data.webhookData,
         devMode: data.devMode || false,
       } as any);
@@ -192,5 +174,115 @@ export class PurchaseService extends BaseService {
       throw new Error(`Failed to create purchase`);
     }
   }
-}
 
+  /**
+   * Check if customer has video access based on purchase history
+   */
+  async hasVideoAccess(customerId: string): Promise<boolean> {
+    try {
+      const purchases = await this.purchaseRepository.findByCustomerId(customerId);
+      
+      // Check if customer has any completed purchase with video access
+      return purchases.some(purchase => 
+        purchase.status === 'completed' && 
+        this.hasVideoAccessInPurchase(purchase)
+      );
+    } catch (error) {
+      LoggerHelper.error('PurchaseService', 'hasVideoAccess', 'Error checking video access', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        customerId,
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Check if customer has specific products
+   */
+  async hasSpecificProducts(customerId: string, requiredProducts: string[]): Promise<boolean> {
+    try {
+      const purchases = await this.purchaseRepository.findByCustomerId(customerId);
+      
+      // Check if customer has any completed purchase with the required products
+      return purchases.some(purchase => {
+        if (purchase.status !== 'completed') return false;
+        
+        const products = purchase.products as any;
+        if (!products || !Array.isArray(products)) return false;
+        
+        // Check if all required products are in the purchase
+        return requiredProducts.every(requiredProduct => 
+          products.some((product: any) => 
+            product.id === requiredProduct || product.name === requiredProduct
+          )
+        );
+      });
+    } catch (error) {
+      LoggerHelper.error('PurchaseService', 'hasSpecificProducts', 'Error checking specific products', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        customerId,
+        requiredProducts,
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Get customer's purchased products
+   */
+  async getCustomerProducts(customerId: string): Promise<string[]> {
+    try {
+      const purchases = await this.purchaseRepository.findByCustomerId(customerId);
+      const products: string[] = [];
+      
+      purchases.forEach(purchase => {
+        if (purchase.status === 'completed' && purchase.products) {
+          const purchaseProducts = purchase.products as any;
+          if (Array.isArray(purchaseProducts)) {
+            purchaseProducts.forEach((product: any) => {
+              const productId = product.id || product.name;
+              if (productId && !products.includes(productId)) {
+                products.push(productId);
+              }
+            });
+          }
+        }
+      });
+      
+      return products;
+    } catch (error) {
+      LoggerHelper.error('PurchaseService', 'getCustomerProducts', 'Error getting customer products', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        customerId,
+      });
+      return [];
+    }
+  }
+
+  /**
+   * Check if purchase has video access
+   */
+  private hasVideoAccessInPurchase(purchase: Purchase): boolean {
+    try {
+      const products = purchase.products as any;
+      if (!products || !Array.isArray(products)) return false;
+      
+      // Check if any product in the purchase gives video access
+      return products.some((product: any) => {
+        const productName = (product.name || '').toLowerCase();
+        const productId = (product.id || '').toLowerCase();
+        
+        return productName.includes('video') || 
+               productId.includes('video') ||
+               productName.includes('template') ||
+               productId.includes('template');
+      });
+    } catch (error) {
+      LoggerHelper.error('PurchaseService', 'hasVideoAccessInPurchase', 'Error checking video access in purchase', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        purchaseId: purchase.id,
+      });
+      return false;
+    }
+  }
+}

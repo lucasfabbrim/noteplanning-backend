@@ -1,41 +1,26 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { BaseController } from './base.controller';
-import { MembershipService } from '@/services';
-import {
-  CreateMembershipInput,
-  UpdateMembershipInput,
-  MembershipQuery,
-  MembershipParams,
-} from '@/validators';
 
 export class MembershipController extends BaseController {
-  private membershipService: MembershipService;
+  private prisma: PrismaClient;
 
   constructor(prisma: PrismaClient) {
     super();
-    this.membershipService = new MembershipService(prisma);
+    this.prisma = prisma;
   }
 
   /**
-   * GET /memberships - Get all memberships with pagination and filters
+   * GET /memberships - Get all memberships
    */
-  async getAllMemberships(request: FastifyRequest<{ Querystring: MembershipQuery }>, reply: FastifyReply) {
+  async getAllMemberships(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const result = await this.membershipService.getAllMemberships(request.query);
-      return this.sendPaginated(reply, result.data, result.pagination, 'Memberships retrieved successfully');
-    } catch (error) {
-      return this.handleServiceError(reply, error);
-    }
-  }
+      const memberships = await this.prisma.membership.findMany({
+        where: { deactivatedAt: null },
+        orderBy: { createdAt: 'desc' },
+      });
 
-  /**
-   * GET /memberships/active - Get active memberships only
-   */
-  async getActiveMemberships(request: FastifyRequest<{ Querystring: Omit<MembershipQuery, 'isActive'> }>, reply: FastifyReply) {
-    try {
-      const result = await this.membershipService.getActiveMemberships(request.query);
-      return this.sendPaginated(reply, result.data, result.pagination, 'Active memberships retrieved successfully');
+      return this.sendSuccess(reply, memberships, 'Memberships retrieved successfully');
     } catch (error) {
       return this.handleServiceError(reply, error);
     }
@@ -44,43 +29,22 @@ export class MembershipController extends BaseController {
   /**
    * GET /memberships/:id - Get membership by ID
    */
-  async getMembershipById(request: FastifyRequest<{ Params: MembershipParams }>, reply: FastifyReply) {
+  async getMembershipById(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const membership = await this.membershipService.getMembershipById(request.params.id);
-      return this.sendSuccess(reply, membership, 'Membership retrieved successfully');
-    } catch (error) {
-      return this.handleServiceError(reply, error);
-    }
-  }
+      const params = request.params as { id: string };
+      
+      const membership = await this.prisma.membership.findFirst({
+        where: {
+          id: params.id,
+          deactivatedAt: null,
+        },
+      });
 
-  /**
-   * GET /memberships/customer/:customerId - Get memberships by customer ID
-   */
-  async getMembershipsByCustomerId(
-    request: FastifyRequest<{ Params: { customerId: string }; Querystring: Omit<MembershipQuery, 'customerId'> }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const result = await this.membershipService.getMembershipsByCustomerId(request.params.customerId, request.query);
-      return this.sendPaginated(reply, result.data, result.pagination, 'Customer memberships retrieved successfully');
-    } catch (error) {
-      return this.handleServiceError(reply, error);
-    }
-  }
-
-  /**
-   * GET /memberships/customer/:customerId/active - Get active membership for customer
-   */
-  async getActiveMembershipByCustomerId(
-    request: FastifyRequest<{ Params: { customerId: string } }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const membership = await this.membershipService.getActiveMembershipByCustomerId(request.params.customerId);
       if (!membership) {
-        return this.sendSuccess(reply, null, 'No active membership found for customer');
+        return this.sendError(reply, 'Membership not found', 404);
       }
-      return this.sendSuccess(reply, membership, 'Active membership retrieved successfully');
+
+      return this.sendSuccess(reply, membership, 'Membership retrieved successfully');
     } catch (error) {
       return this.handleServiceError(reply, error);
     }
@@ -89,9 +53,19 @@ export class MembershipController extends BaseController {
   /**
    * POST /memberships - Create a new membership
    */
-  async createMembership(request: FastifyRequest<{ Body: CreateMembershipInput }>, reply: FastifyReply) {
+  async createMembership(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const membership = await this.membershipService.createMembership(request.body);
+      const body = request.body as any;
+      
+      const membership = await this.prisma.membership.create({
+        data: {
+          customerId: body.customerId,
+          endDate: new Date(body.endDate),
+          isActive: body.isActive !== undefined ? body.isActive : true,
+          planType: body.planType || 'monthly',
+        },
+      });
+
       return this.sendCreated(reply, membership, 'Membership created successfully');
     } catch (error) {
       return this.handleServiceError(reply, error);
@@ -99,14 +73,22 @@ export class MembershipController extends BaseController {
   }
 
   /**
-   * PUT /memberships/:id - Update membership by ID
+   * PUT /memberships/:id - Update membership
    */
-  async updateMembership(
-    request: FastifyRequest<{ Params: MembershipParams; Body: UpdateMembershipInput }>,
-    reply: FastifyReply
-  ) {
+  async updateMembership(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const membership = await this.membershipService.updateMembership(request.params.id, request.body);
+      const params = request.params as { id: string };
+      const body = request.body as any;
+
+      const membership = await this.prisma.membership.update({
+        where: { id: params.id },
+        data: {
+          endDate: body.endDate ? new Date(body.endDate) : undefined,
+          isActive: body.isActive,
+          planType: body.planType,
+        },
+      });
+
       return this.sendSuccess(reply, membership, 'Membership updated successfully');
     } catch (error) {
       return this.handleServiceError(reply, error);
@@ -114,51 +96,19 @@ export class MembershipController extends BaseController {
   }
 
   /**
-   * DELETE /memberships/:id - Delete membership by ID (soft delete)
+   * DELETE /memberships/:id - Delete membership
    */
-  async deleteMembership(request: FastifyRequest<{ Params: MembershipParams }>, reply: FastifyReply) {
+  async deleteMembership(request: FastifyRequest, reply: FastifyReply) {
     try {
-      await this.membershipService.deleteMembership(request.params.id);
-      return this.sendNoContent(reply, 'Membership deleted successfully');
-    } catch (error) {
-      return this.handleServiceError(reply, error);
-    }
-  }
+      const params = request.params as { id: string };
 
-  /**
-   * PATCH /memberships/:id/extend - Extend membership
-   */
-  async extendMembership(
-    request: FastifyRequest<{ Params: MembershipParams; Body: { additionalDays: number } }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const membership = await this.membershipService.extendMembership(request.params.id, request.body.additionalDays);
-      return this.sendSuccess(reply, membership, 'Membership extended successfully');
-    } catch (error) {
-      return this.handleServiceError(reply, error);
-    }
-  }
+      await this.prisma.membership.update({
+        where: { id: params.id },
+        data: { deactivatedAt: new Date() },
+      });
 
-  /**
-   * GET /memberships/stats - Get membership statistics
-   */
-  async getMembershipStats(request: FastifyRequest, reply: FastifyReply) {
-    try {
-      const stats = await this.membershipService.getMembershipStats();
-      return this.sendSuccess(reply, stats.data, 'Membership statistics retrieved successfully');
-    } catch (error) {
-      return this.handleServiceError(reply, error);
-    }
-  }
-
-  /**
-   * POST /memberships/deactivate-expired - Deactivate expired memberships
-   */
-  async deactivateExpiredMemberships(request: FastifyRequest, reply: FastifyReply) {
-    try {
-      const count = await this.membershipService.deactivateExpiredMemberships();
-      return this.sendSuccess(reply, { deactivatedCount: count }, 'Expired memberships deactivated successfully');
+      reply.code(204);
+      return {};
     } catch (error) {
       return this.handleServiceError(reply, error);
     }

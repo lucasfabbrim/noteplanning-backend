@@ -7,11 +7,13 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { env, DatabaseConfig, logger } from '@/config';
 import { errorHandler } from '@/middleware';
+import { authRoutes } from '@/routes/auth.routes';
 import { customersRoutes } from '@/routes/customers.routes';
 import { videosRoutes } from '@/routes/videos.routes';
 import { membershipsRoutes } from '@/routes/memberships.routes';
 import { abacatePayRoutes } from '@/routes/abacatepay.routes';
 import { purchasesRoutes } from '@/routes/purchases.routes';
+import { categoriesRoutes } from '@/routes/categories.routes';
 
 /**
  * Create Fastify server instance
@@ -135,10 +137,12 @@ async function buildServer() {
     });
 
     // Register routes
+    await fastify.register(authRoutes, { prefix: '/api/auth' });
     await fastify.register(customersRoutes, { prefix: '/api/customers' });
     await fastify.register(videosRoutes, { prefix: '/api/videos' });
     await fastify.register(membershipsRoutes, { prefix: '/api/memberships' });
     await fastify.register(purchasesRoutes, { prefix: '/api/purchases' });
+    await fastify.register(categoriesRoutes, { prefix: '/api/categories' });
     await fastify.register(abacatePayRoutes, { prefix: '/webhook' });
 
     // Root endpoint

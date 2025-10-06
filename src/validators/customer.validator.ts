@@ -74,10 +74,16 @@ export const customerLoginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+// Login response schema (with token)
+export const customerLoginResponseSchema = customerResponseSchema.extend({
+  token: z.string(),
+});
+
 // Type exports
 export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;
 export type UpdateCustomerInput = z.infer<typeof updateCustomerSchema>;
 export type CustomerResponse = z.infer<typeof customerResponseSchema>;
+export type CustomerLoginResponse = z.infer<typeof customerLoginResponseSchema>;
 export type CustomerWithRelations = z.infer<typeof customerWithRelationsSchema>;
 export type CustomerQuery = z.infer<typeof customerQuerySchema>;
 export type CustomerParams = z.infer<typeof customerParamsSchema>;

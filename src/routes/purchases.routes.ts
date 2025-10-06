@@ -1,43 +1,37 @@
 import { FastifyInstance } from 'fastify';
-import { PurchaseController } from '@/controllers/purchase.controller';
-import { prisma } from '@/config';
-import { requireAdmin, authenticate } from '@/middleware';
+import { PrismaClient } from '@prisma/client';
+import { PurchaseController } from '@/controllers';
+import { requireAdmin } from '@/middleware';
 
-/**
- * Purchase routes
- */
 export async function purchasesRoutes(fastify: FastifyInstance) {
+  const prisma = new PrismaClient();
   const purchaseController = new PurchaseController(prisma);
 
-  // GET /purchases - Get all purchases with filters (Admin only)
+  // GET /purchases - Get all purchases (Admin only)
   fastify.get('/', {
     preHandler: [requireAdmin],
     schema: {
-      description: 'Get all purchases with pagination and filters (Admin only)',
+      description: 'Get all purchases (Admin only)',
       tags: ['purchases'],
       security: [{ bearerAuth: [] }],
-      querystring: {
-        type: 'object',
-        properties: {
-          page: { type: 'number', default: 1 },
-          limit: { type: 'number', default: 10 },
-          status: { type: 'string', enum: ['completed', 'pending', 'failed', 'refunded'] },
-          customerId: { type: 'string' },
-          customerEmail: { type: 'string' },
-          startDate: { type: 'string', format: 'date-time' },
-          endDate: { type: 'string', format: 'date-time' },
-        },
-      },
     },
-  }, async (request, reply) => {
-    return purchaseController.getAllPurchases(request, reply);
-  });
+  }, purchaseController.getAllPurchases.bind(purchaseController));
 
-  // GET /purchases/:id - Get purchase by ID (Admin only)
+  // GET /purchases/my-purchases - Get user's own purchases
+  fastify.get('/my-purchases', {
+    preHandler: [requireAdmin],
+    schema: {
+      description: 'Get user\'s own purchases',
+      tags: ['purchases'],
+      security: [{ bearerAuth: [] }],
+    },
+  }, purchaseController.getMyPurchases.bind(purchaseController));
+
+  // GET /purchases/:id - Get purchase by ID
   fastify.get('/:id', {
     preHandler: [requireAdmin],
     schema: {
-      description: 'Get purchase by ID (Admin only)',
+      description: 'Get purchase by ID',
       tags: ['purchases'],
       security: [{ bearerAuth: [] }],
       params: {
@@ -48,118 +42,33 @@ export async function purchasesRoutes(fastify: FastifyInstance) {
         required: ['id'],
       },
     },
-  }, async (request, reply) => {
-    return purchaseController.getPurchaseById(request, reply);
-  });
+  }, purchaseController.getPurchaseById.bind(purchaseController));
 
-  // GET /purchases/my-purchases - Get own purchases (Customer + Admin)
-  fastify.get('/my-purchases', {
-    preHandler: [authenticate],
-    schema: {
-      description: 'Get your own purchases',
-      tags: ['purchases'],
-      security: [{ bearerAuth: [] }],
-    },
-  }, async (request, reply) => {
-    try {
-      const user = (request as any).user;
-      const purchases = await prisma.purchase.findMany({
-        where: {
-          customerId: user.id,
-          deactivatedAt: null,
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-      });
-      
-      return reply.status(200).send({
-        success: true,
-        message: 'Purchases retrieved successfully',
-        data: purchases,
-      });
-    } catch (error) {
-      return reply.status(500).send({
-        success: false,
-        message: 'Failed to get purchases',
-      });
-    }
-  });
-
-  // GET /purchases/customer/:customerId - Get purchases by customer ID (Admin only)
-  fastify.get('/customer/:customerId', {
+  // POST /purchases - Create a new purchase (Admin only)
+  fastify.post('/', {
     preHandler: [requireAdmin],
     schema: {
-      description: 'Get purchases by customer ID (Admin only)',
+      description: 'Create a new purchase (Admin only)',
       tags: ['purchases'],
       security: [{ bearerAuth: [] }],
-      params: {
+      body: {
         type: 'object',
         properties: {
           customerId: { type: 'string' },
+          amount: { type: 'number' },
+          paymentAmount: { type: 'number' },
+          event: { type: 'string' },
+          status: { type: 'string' },
+          customerName: { type: 'string' },
+          customerEmail: { type: 'string' },
+          customerPhone: { type: 'string' },
+          customerTaxId: { type: 'string' },
+          products: { type: 'array' },
+          webhookData: { type: 'object' },
+          devMode: { type: 'boolean' },
         },
-        required: ['customerId'],
+        required: ['customerId', 'amount'],
       },
     },
-  }, async (request, reply) => {
-    return purchaseController.getPurchasesByCustomerId(request, reply);
-  });
-
-  // GET /purchases/email/:email - Get purchases by customer email (Admin only)
-  fastify.get('/email/:email', {
-    preHandler: [requireAdmin],
-    schema: {
-      description: 'Get purchases by customer email (Admin only)',
-      tags: ['purchases'],
-      security: [{ bearerAuth: [] }],
-      params: {
-        type: 'object',
-        properties: {
-          email: { type: 'string', format: 'email' },
-        },
-        required: ['email'],
-      },
-    },
-  }, async (request, reply) => {
-    return purchaseController.getPurchasesByEmail(request, reply);
-  });
-
-  // GET /purchases/customer/:customerId/stats - Get customer purchase statistics (Admin only)
-  fastify.get('/customer/:customerId/stats', {
-    preHandler: [requireAdmin],
-    schema: {
-      description: 'Get customer purchase statistics (Admin only)',
-      tags: ['purchases'],
-      security: [{ bearerAuth: [] }],
-      params: {
-        type: 'object',
-        properties: {
-          customerId: { type: 'string' },
-        },
-        required: ['customerId'],
-      },
-    },
-  }, async (request, reply) => {
-    return purchaseController.getCustomerStats(request, reply);
-  });
-
-  // GET /purchases/customer/:customerId/video-access - Check if customer has video access (Admin only)
-  fastify.get('/customer/:customerId/video-access', {
-    preHandler: [requireAdmin],
-    schema: {
-      description: 'Check if customer has video access based on purchase history (Admin only)',
-      tags: ['purchases'],
-      security: [{ bearerAuth: [] }],
-      params: {
-        type: 'object',
-        properties: {
-          customerId: { type: 'string' },
-        },
-        required: ['customerId'],
-      },
-    },
-  }, async (request, reply) => {
-    return purchaseController.checkVideoAccess(request, reply);
-  });
+  }, purchaseController.createPurchase.bind(purchaseController));
 }
-

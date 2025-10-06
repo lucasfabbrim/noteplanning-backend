@@ -85,28 +85,25 @@ export class VideoService extends BaseService {
    */
   async createVideo(data: CreateVideoInput): Promise<VideoResponse> {
     try {
-      // Validate that customer exists
-      await this.validateRecordExists(
-        this.prisma.customer,
-        data.customerId,
-        'Customer not found'
-      );
-
-      // Create video
-      const video = await this.videoRepository.create({
-        title: data.title,
-        description: data.description,
-        url: data.url,
-        thumbnail: data.thumbnail,
-        duration: data.duration,
-        isPublished: data.isPublished,
-        customer: {
-          connect: { id: data.customerId },
+      console.log('VideoService.createVideo - Input data:', data);
+      
+      // Create video directly
+      const video = await this.prisma.video.create({
+        data: {
+          title: data.title,
+          description: data.description,
+          url: data.url,
+          thumbnail: data.thumbnail,
+          duration: data.duration,
+          isPublished: data.isPublished,
+          customerId: data.customerId,
         },
       });
 
-      return video;
+      console.log('VideoService.createVideo - Video created:', video);
+      return video as any;
     } catch (error) {
+      console.error('VideoService.createVideo - Error:', error);
       throw new Error(`Failed to create video: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -213,4 +210,5 @@ export class VideoService extends BaseService {
     const imageUrlPattern = /\.(jpg|jpeg|png|gif|webp)$/i;
     return imageUrlPattern.test(url) || url.startsWith('http');
   }
+
 }

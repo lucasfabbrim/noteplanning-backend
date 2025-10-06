@@ -89,14 +89,10 @@ export class AbacatePayService extends BaseService {
       const purchase = await this.purchaseService.createPurchase({
         customerId: customer.id,
         amount: billing.amount,
-        paymentAmount: payment.amount,
-        event,
         status: this.mapEventToStatus(event),
-        customerName: metadata.name,
-        customerEmail: metadata.email,
-        customerPhone: metadata.cellphone,
-        customerTaxId: metadata.taxId,
         products: products || [],
+        paymentMethod: 'abacatepay',
+        transactionId: `abacatepay_${Date.now()}`,
         webhookData: webhookData as any,
         devMode: devMode || false,
       });

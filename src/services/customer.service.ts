@@ -1,12 +1,15 @@
 import { PrismaClient, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import { BaseService } from './base.service';
 import { CustomerRepository } from '@/repositories';
+import { env } from '@/config';
 import {
   CreateCustomerInput,
   UpdateCustomerInput,
   CustomerQuery,
   CustomerResponse,
+  CustomerLoginResponse,
   CustomerWithRelations,
 } from '@/validators';
 
@@ -152,9 +155,11 @@ export class CustomerService extends BaseService {
   /**
    * Authenticate customer
    */
-  async authenticateCustomer(email: string, password: string): Promise<CustomerResponse> {
+  async authenticateCustomer(email: string, password: string): Promise<CustomerLoginResponse> {
     try {
+      console.log('Authenticating customer with email:', email);
       const customer = await this.customerRepository.findByEmail(email);
+      console.log('Customer found:', customer ? 'Yes' : 'No');
       if (!customer) {
         throw new Error('Invalid credentials');
       }
@@ -168,9 +173,33 @@ export class CustomerService extends BaseService {
         throw new Error('Account is deactivated');
       }
 
-      // Return customer without password
+      // Generate JWT token
+      const token = jwt.sign(
+        { 
+          id: customer.id, 
+          email: customer.email, 
+          role: customer.role 
+        },
+        env.JWT_SECRET,
+        { expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions
+      );
+
+      // Return standardized login response
       const { password: _, ...customerResponse } = customer;
-      return customerResponse;
+      const result = {
+        token,
+        user: {
+          id: customer.id,
+          name: customer.name,
+          email: customer.email,
+          role: customer.role,
+          isActive: customer.isActive,
+          createdAt: customer.createdAt,
+          updatedAt: customer.updatedAt
+        }
+      };
+      console.log('Login result with token:', { ...result, token: '***' });
+      return result as any;
     } catch (error) {
       throw new Error(`Authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }

@@ -34,4 +34,4 @@ primary_region = "gru"  # São Paulo region (updated from deprecated gig)
   region = "gru"
 
 [deploy]
-  release_command = "npx prisma migrate deploy"
+  release_command = "npx prisma db push"
