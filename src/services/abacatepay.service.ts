@@ -27,9 +27,9 @@ export class AbacatePayService extends BaseService {
    */
   async processWebhook(webhookData: AbacatePayWebhookBody): Promise<{ customer: Customer; purchase: Purchase }> {
     try {
-      const { data, event, devMode, products } = webhookData;
+      const { data, event, devMode } = webhookData;
       const { billing, payment } = data;
-      const { customer: customerData } = billing;
+      const { customer: customerData, products } = billing;
       const { metadata } = customerData;
 
       // Log webhook received

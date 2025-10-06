@@ -12,25 +12,27 @@ export const abacatePayCustomerMetadataSchema = z.object({
   taxId: z.string().optional(),
 });
 
+// Product schema
+export const abacatePayProductSchema = z.object({
+  id: z.string().optional(),
+  externalId: z.string().optional(),
+  quantity: z.number().optional(),
+  name: z.string().optional(),
+  price: z.number().optional(),
+});
+
 // Billing schema
 export const abacatePayBillingSchema = z.object({
   customer: z.object({
     metadata: abacatePayCustomerMetadataSchema,
   }),
   amount: z.number().positive('Amount must be positive'),
+  products: z.array(abacatePayProductSchema).optional(),
 });
 
 // Payment schema
 export const abacatePayPaymentSchema = z.object({
   amount: z.number().positive('Payment amount must be positive'),
-});
-
-// Product schema
-export const abacatePayProductSchema = z.object({
-  id: z.string().optional(),
-  name: z.string().optional(),
-  quantity: z.number().optional(),
-  price: z.number().optional(),
 });
 
 // Main webhook data schema
