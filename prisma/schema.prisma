@@ -1,0 +1,138 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enum for user roles
+enum Role {
+  FREE
+  MEMBER
+  ADMIN
+}
+
+// Customer model
+model Customer {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  password      String
+  role          Role      @default(FREE)
+  isActive      Boolean   @default(true)
+  
+  // Audit fields
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deactivatedAt DateTime?
+  
+  // Relations
+  memberships   Membership[]
+  videos        Video[]
+  purchases     Purchase[]
+  
+  @@map("customers")
+}
+
+// Video model
+model Video {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  url         String
+  thumbnail   String?
+  duration    Int?      // Duration in seconds
+  isPublished Boolean   @default(false)
+  
+  // Audit fields
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deactivatedAt DateTime?
+  
+  // Relations
+  customerId  String
+  customer    Customer  @relation(fields: [customerId], references: [id])
+  
+  @@map("videos")
+}
+
+// Membership model
+model Membership {
+  id          String    @id @default(cuid())
+  customerId  String
+  startDate   DateTime  @default(now())
+  endDate     DateTime
+  isActive    Boolean   @default(true)
+  planType    String    @default("monthly") // monthly, yearly, etc.
+  
+  // Audit fields
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deactivatedAt DateTime?
+  
+  // Relations
+  customer    Customer  @relation(fields: [customerId], references: [id])
+  
+  @@map("memberships")
+}
+
+// Admin model
+model Admin {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  password      String
+  role          Role      @default(ADMIN)
+  isActive      Boolean   @default(true)
+  
+  // Audit fields
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deactivatedAt DateTime?
+  
+  @@map("admins")
+}
+
+// Purchase model (histórico de compras)
+model Purchase {
+  id              String    @id @default(cuid())
+  customerId      String
+  
+  // Purchase details
+  amount          Float     // Valor total da compra
+  paymentAmount   Float     // Valor pago
+  event           String    // Tipo de evento (payment.completed, etc)
+  status          String    @default("completed") // completed, pending, failed, refunded
+  
+  // Customer data snapshot (from webhook metadata)
+  customerName    String
+  customerEmail   String
+  customerPhone   String?
+  customerTaxId   String?
+  
+  // Products purchased
+  products        Json?     // Array de produtos em formato JSON
+  
+  // Metadata
+  webhookData     Json?     // Dados completos do webhook para referência
+  devMode         Boolean   @default(false)
+  
+  // Audit fields
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deactivatedAt   DateTime?
+  
+  // Relations
+  customer        Customer  @relation(fields: [customerId], references: [id])
+  
+  @@map("purchases")
+  @@index([customerId])
+  @@index([customerEmail])
+  @@index([status])
+  @@index([createdAt])
+}
