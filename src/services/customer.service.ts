@@ -125,9 +125,7 @@ export class CustomerService extends BaseService {
 
   async authenticateCustomer(email: string, password: string): Promise<CustomerLoginResponse> {
     try {
-      console.log('Authenticating customer with email:', email);
       const customer = await this.customerRepository.findByEmail(email);
-      console.log('Customer found:', customer ? 'Yes' : 'No');
       if (!customer) {
         throw new Error('Invalid credentials');
       }
@@ -164,7 +162,6 @@ export class CustomerService extends BaseService {
           updatedAt: customer.updatedAt
         }
       };
-      console.log('Login result with token:', { ...result, token: '***' });
       return result as any;
     } catch (error) {
       throw new Error(`Authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`);

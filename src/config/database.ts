@@ -7,7 +7,12 @@ class DatabaseConfig {
     if (!DatabaseConfig.instance) {
       DatabaseConfig.instance = new PrismaClient({
         log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
-        errorFormat: 'pretty',
+        errorFormat: process.env.NODE_ENV === 'development' ? 'pretty' : 'minimal',
+        datasources: {
+          db: {
+            url: process.env.DATABASE_URL,
+          },
+        },
       });
     }
     return DatabaseConfig.instance;

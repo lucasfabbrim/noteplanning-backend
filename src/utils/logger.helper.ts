@@ -1,12 +1,14 @@
-import { logger } from '@/config';
+import { logger, env } from '@/config';
 
 export class LoggerHelper {
   static info(className: string, method: string, message: string, data?: any) {
-    logger.info({
-      class: className,
-      method,
-      ...(data && { data }),
-    }, message);
+    if (env.NODE_ENV === 'development') {
+      logger.info({
+        class: className,
+        method,
+        ...(data && { data }),
+      }, message);
+    }
   }
 
   static warn(className: string, method: string, message: string, data?: any) {
@@ -23,7 +25,7 @@ export class LoggerHelper {
       method,
     };
 
-    if (process.env.NODE_ENV === 'development' && error) {
+    if (env.NODE_ENV === 'development' && error) {
       errorData.error = error instanceof Error ? error.message : error;
     }
 
@@ -31,30 +33,39 @@ export class LoggerHelper {
   }
 
   static db(className: string, method: string, operation: string, entity: string) {
-    logger.debug({
-      class: className,
-      method,
-      operation,
-      entity,
-    }, `DB ${operation}: ${entity}`);
+    // Disabled in production to save resources
+    if (env.NODE_ENV === 'development') {
+      logger.debug({
+        class: className,
+        method,
+        operation,
+        entity,
+      }, `DB ${operation}: ${entity}`);
+    }
   }
 
   static auth(method: string, event: string, data?: any) {
-    logger.info({
-      class: 'AuthService',
-      method,
-      event,
-      ...(data && { data }),
-    }, `Auth: ${event}`);
+    // Only log auth errors in production
+    if (env.NODE_ENV === 'development') {
+      logger.info({
+        class: 'AuthService',
+        method,
+        event,
+        ...(data && { data }),
+      }, `Auth: ${event}`);
+    }
   }
 
   static webhook(source: string, event: string, data?: any) {
-    logger.info({
-      class: 'WebhookHandler',
-      source,
-      event,
-      ...(data && { data }),
-    }, `Webhook: ${source} - ${event}`);
+    // Only log webhook errors in production
+    if (env.NODE_ENV === 'development') {
+      logger.info({
+        class: 'WebhookHandler',
+        source,
+        event,
+        ...(data && { data }),
+      }, `Webhook: ${source} - ${event}`);
+    }
   }
 }
 

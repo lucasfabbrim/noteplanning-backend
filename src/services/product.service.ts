@@ -31,10 +31,6 @@ export class ProductService extends BaseService {
           },
         });
 
-        LoggerHelper.info('ProductService', 'createOrUpdateProduct', 'Product updated', {
-          productId: updatedProduct.id,
-          externalId: productData.externalId,
-        });
 
         return updatedProduct;
       } else {
@@ -49,10 +45,6 @@ export class ProductService extends BaseService {
           },
         });
 
-        LoggerHelper.info('ProductService', 'createOrUpdateProduct', 'Product created', {
-          productId: newProduct.id,
-          externalId: productData.externalId,
-        });
 
         return newProduct;
       }
@@ -113,11 +105,6 @@ export class ProductService extends BaseService {
         },
       });
 
-      LoggerHelper.info('ProductService', 'updateProductCategory', 'Product category updated', {
-        productId: product.id,
-        externalId,
-        categoryId,
-      });
 
       return product;
     } catch (error) {

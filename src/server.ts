@@ -12,7 +12,7 @@ import { categoriesRoutes } from '@/routes/categories.routes';
 import { abacatePayRoutes } from '@/routes/abacatepay.routes';
 
 const fastify = Fastify({
-  logger: {
+  logger: env.NODE_ENV === 'production' ? false : {
     level: env.LOG_LEVEL,
     transport: env.NODE_ENV === 'development' ? {
       target: 'pino-pretty',
@@ -25,6 +25,7 @@ const fastify = Fastify({
   },
   trustProxy: true,
   bodyLimit: env.MAX_FILE_SIZE,
+  disableRequestLogging: env.NODE_ENV === 'production',
 });
 
 async function buildServer() {
@@ -123,8 +124,10 @@ async function start() {
       host: env.HOST,
     });
 
-    logger.info(`🚀 Server is running on http://${env.HOST}:${env.PORT}`);
-    logger.info(`📚 API Documentation available at http://${env.HOST}:${env.PORT}/docs`);
+    if (env.NODE_ENV === 'development') {
+      logger.info(`🚀 Server is running on http://${env.HOST}:${env.PORT}`);
+      logger.info(`📚 API Documentation available at http://${env.HOST}:${env.PORT}/docs`);
+    }
 
   } catch (error) {
     logger.error(error, 'Failed to start server');
@@ -134,7 +137,9 @@ async function start() {
 
 async function shutdown() {
   try {
-    logger.info('🛑 Shutting down server...');
+    if (env.NODE_ENV === 'development') {
+      logger.info('🛑 Shutting down server...');
+    }
     await DatabaseConfig.disconnect();
     process.exit(0);
   } catch (error) {

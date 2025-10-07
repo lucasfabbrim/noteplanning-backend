@@ -46,10 +46,6 @@ export class EmailService {
         `,
       });
 
-      LoggerHelper.info('EmailService', 'sendWelcomeEmail', 'Welcome email sent', {
-        to,
-        emailId: result.data?.id,
-      });
 
       return true;
     } catch (error) {
@@ -100,10 +96,6 @@ export class EmailService {
         `,
       });
 
-      LoggerHelper.info('EmailService', 'sendPurchaseConfirmation', 'Purchase confirmation sent', {
-        to,
-        emailId: result.data?.id,
-      });
 
       return true;
     } catch (error) {
