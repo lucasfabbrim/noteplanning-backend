@@ -127,18 +127,6 @@ async function main() {
 
   console.log('✅ Sample videos created');
 
-  // Create sample membership
-  const membership = await prisma.membership.create({
-    data: {
-      customerId: customer2.id,
-      startDate: new Date(),
-      endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-      isActive: true,
-      planType: 'monthly',
-    },
-  });
-
-  console.log('✅ Sample membership created');
 
   // Create sample purchase
   const purchase = await prisma.purchase.create({
