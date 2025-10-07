@@ -147,7 +147,7 @@ async function main() {
       amount: 29.99,
       paymentAmount: 29.99,
       event: 'billing.paid',
-      status: 'completed',
+      status: 'pending',
       customerName: customer2.name,
       customerEmail: customer2.email,
       customerPhone: '11999999999',

@@ -1,12 +1,12 @@
 import { FastifyInstance } from 'fastify';
 import { prisma } from '@/config';
+import { sanitizeCategories, sanitizeCategory, sanitizeVideos, sanitizeVideo } from '@/utils/response-sanitizer';
 
 export async function categoriesRoutes(fastify: FastifyInstance) {
-  // GET /categories - List all categories
   fastify.get('/', {
     schema: {
       description: 'List all categories',
-      tags: ['categories'],
+      tags: ['Categories'],
       querystring: {
         type: 'object',
         properties: {
@@ -41,7 +41,7 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
       return reply.status(200).send({
         success: true,
         message: 'Categories retrieved successfully',
-        data: categories,
+        data: sanitizeCategories(categories),
         pagination: {
           page,
           limit,
@@ -58,11 +58,10 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // GET /categories/:id - Get category by ID
   fastify.get('/:id', {
     schema: {
       description: 'Get category by ID',
-      tags: ['categories'],
+      tags: ['Categories'],
       params: {
         type: 'object',
         properties: {
@@ -101,7 +100,7 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
       return reply.status(200).send({
         success: true,
         message: 'Category retrieved successfully',
-        data: category,
+        data: sanitizeCategory(category),
       });
     } catch (error) {
       return reply.status(500).send({
@@ -112,11 +111,10 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // GET /categories/slug/:slug - Get category by slug
   fastify.get('/slug/:slug', {
     schema: {
       description: 'Get category by slug',
-      tags: ['categories'],
+      tags: ['Categories'],
       params: {
         type: 'object',
         properties: {
@@ -155,12 +153,488 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
       return reply.status(200).send({
         success: true,
         message: 'Category retrieved successfully',
-        data: category,
+        data: category.slug,
       });
     } catch (error) {
       return reply.status(500).send({
         success: false,
         message: 'Failed to get category',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  fastify.get('/:id/videos', {
+    schema: {
+      description: 'Get videos by category ID',
+      tags: ['Videos by Category'],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+        },
+        required: ['id'],
+      },
+      querystring: {
+        type: 'object',
+        properties: {
+          isPublished: { 
+            type: 'string',
+            enum: ['true', 'false'],
+            description: 'Filter only published videos'
+          },
+          page: { 
+            type: 'string',
+            description: 'Page number for pagination'
+          },
+          limit: { 
+            type: 'string',
+            description: 'Number of videos per page'
+          },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const query = request.query as { 
+        isPublished?: string;
+        page?: string;
+        limit?: string;
+      };
+
+      const category = await prisma.category.findFirst({
+        where: { 
+          id,
+          deactivatedAt: null,
+          isActive: true 
+        },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          slug: true,
+        },
+      });
+
+      if (!category) {
+        return reply.status(404).send({
+          success: false,
+          message: 'Category not found',
+        });
+      }
+
+      const where: any = {
+        categoryId: id,
+        deactivatedAt: null,
+      };
+
+      if (query.isPublished === 'true') {
+        where.isPublished = true;
+      }
+
+      const page = parseInt(query.page || '1');
+      const limit = parseInt(query.limit || '10');
+      const skip = (page - 1) * limit;
+
+      const [videos, total] = await Promise.all([
+        prisma.video.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            url: true,
+            thumbnail: true,
+            duration: true,
+            isPublished: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+        prisma.video.count({ where }),
+      ]);
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Videos retrieved successfully',
+        data: {
+          category: sanitizeCategory(category),
+          videos: sanitizeVideos(videos),
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit),
+          },
+        },
+      });
+    } catch (error) {
+      return reply.status(500).send({
+        success: false,
+        message: 'Failed to get videos',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  fastify.get('/:id/video/:videoId', {
+    schema: {
+      description: 'Get specific video by category and video ID',
+      tags: ['Videos by Category'],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          videoId: { type: 'string' },
+        },
+        required: ['id', 'videoId'],
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const { id, videoId } = request.params as { id: string; videoId: string };
+
+      const category = await prisma.category.findFirst({
+        where: {
+          id,
+          deactivatedAt: null,
+          isActive: true
+        },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+        },
+      });
+
+      if (!category) {
+        return reply.status(404).send({
+          success: false,
+          message: 'Category not found',
+        });
+      }
+
+      const video = await prisma.video.findFirst({
+        where: {
+          id: videoId,
+          categoryId: id,
+          deactivatedAt: null,
+        },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          url: true,
+          thumbnail: true,
+          duration: true,
+          isPublished: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      if (!video) {
+        return reply.status(404).send({
+          success: false,
+          message: 'Video not found in this category',
+        });
+      }
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Video retrieved successfully',
+        data: {
+          category: sanitizeCategory(category),
+          video: sanitizeVideo(video),
+        },
+      });
+    } catch (error) {
+      return reply.status(500).send({
+        success: false,
+        message: 'Failed to get video',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  fastify.post('/:id/video', {
+    schema: {
+      description: 'Create new video in category',
+      tags: ['Videos by Category'],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+        },
+        required: ['id'],
+      },
+      body: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          description: { type: 'string' },
+          url: { type: 'string' },
+          thumbnail: { type: 'string' },
+          duration: { type: 'number' },
+          isPublished: { type: 'boolean', default: false },
+        },
+        required: ['title', 'url'],
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const body = request.body as {
+        title: string;
+        description?: string;
+        url: string;
+        thumbnail?: string;
+        duration?: number;
+        isPublished?: boolean;
+      };
+
+      const category = await prisma.category.findFirst({
+        where: {
+          id,
+          deactivatedAt: null,
+          isActive: true
+        },
+        select: {
+          id: true,
+          name: true,
+        },
+      });
+
+      if (!category) {
+        return reply.status(404).send({
+          success: false,
+          message: 'Category not found',
+        });
+      }
+
+      const video = await prisma.video.create({
+        data: {
+          title: body.title,
+          description: body.description,
+          url: body.url,
+          thumbnail: body.thumbnail,
+          duration: body.duration,
+          isPublished: body.isPublished || false,
+          categoryId: id,
+        },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          url: true,
+          thumbnail: true,
+          duration: true,
+          isPublished: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      return reply.status(201).send({
+        success: true,
+        message: 'Video created successfully',
+        data: {
+          category: sanitizeCategory(category),
+          video: sanitizeVideo(video),
+        },
+      });
+    } catch (error) {
+      return reply.status(500).send({
+        success: false,
+        message: 'Failed to create video',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  fastify.put('/:id/video/:videoId', {
+    schema: {
+      description: 'Update video in category',
+      tags: ['Videos by Category'],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          videoId: { type: 'string' },
+        },
+        required: ['id', 'videoId'],
+      },
+      body: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          description: { type: 'string' },
+          url: { type: 'string' },
+          thumbnail: { type: 'string' },
+          duration: { type: 'number' },
+          isPublished: { type: 'boolean' },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const { id, videoId } = request.params as { id: string; videoId: string };
+      const body = request.body as {
+        title?: string;
+        description?: string;
+        url?: string;
+        thumbnail?: string;
+        duration?: number;
+        isPublished?: boolean;
+      };
+
+      const category = await prisma.category.findFirst({
+        where: {
+          id,
+          deactivatedAt: null,
+          isActive: true
+        },
+        select: {
+          id: true,
+          name: true,
+        },
+      });
+
+      if (!category) {
+        return reply.status(404).send({
+          success: false,
+          message: 'Category not found',
+        });
+      }
+
+      const existingVideo = await prisma.video.findFirst({
+        where: {
+          id: videoId,
+          categoryId: id,
+          deactivatedAt: null,
+        },
+      });
+
+      if (!existingVideo) {
+        return reply.status(404).send({
+          success: false,
+          message: 'Video not found in this category',
+        });
+      }
+
+      const video = await prisma.video.update({
+        where: { id: videoId },
+        data: {
+          ...(body.title && { title: body.title }),
+          ...(body.description !== undefined && { description: body.description }),
+          ...(body.url && { url: body.url }),
+          ...(body.thumbnail !== undefined && { thumbnail: body.thumbnail }),
+          ...(body.duration !== undefined && { duration: body.duration }),
+          ...(body.isPublished !== undefined && { isPublished: body.isPublished }),
+        },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          url: true,
+          thumbnail: true,
+          duration: true,
+          isPublished: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Video updated successfully',
+        data: {
+          category: sanitizeCategory(category),
+          video: sanitizeVideo(video),
+        },
+      });
+    } catch (error) {
+      return reply.status(500).send({
+        success: false,
+        message: 'Failed to update video',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  fastify.delete('/:id/video/:videoId', {
+    schema: {
+      description: 'Delete video from category (soft delete)',
+      tags: ['Videos by Category'],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          videoId: { type: 'string' },
+        },
+        required: ['id', 'videoId'],
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const { id, videoId } = request.params as { id: string; videoId: string };
+
+      const category = await prisma.category.findFirst({
+        where: {
+          id,
+          deactivatedAt: null,
+          isActive: true
+        },
+        select: {
+          id: true,
+          name: true,
+        },
+      });
+
+      if (!category) {
+        return reply.status(404).send({
+          success: false,
+          message: 'Category not found',
+        });
+      }
+
+      const existingVideo = await prisma.video.findFirst({
+        where: {
+          id: videoId,
+          categoryId: id,
+          deactivatedAt: null,
+        },
+      });
+
+      if (!existingVideo) {
+        return reply.status(404).send({
+          success: false,
+          message: 'Video not found in this category',
+        });
+      }
+
+      await prisma.video.update({
+        where: { id: videoId },
+        data: {
+          deactivatedAt: new Date(),
+        },
+      });
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Video deleted successfully',
+        data: {
+          category: sanitizeCategory(category),
+        },
+      });
+    } catch (error) {
+      return reply.status(500).send({
+        success: false,
+        message: 'Failed to delete video',
         error: error instanceof Error ? error.message : 'Unknown error',
       });
     }

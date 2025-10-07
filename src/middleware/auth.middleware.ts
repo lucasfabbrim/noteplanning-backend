@@ -4,9 +4,6 @@ import jwt from 'jsonwebtoken';
 import { env } from '@/config';
 import { LoggerHelper } from '@/utils/logger.helper';
 
-/**
- * JWT authentication middleware
- */
 export async function authenticate(request: FastifyRequest, reply: FastifyReply) {
   try {
     const token = request.headers.authorization?.replace('Bearer ', '');
@@ -26,9 +23,6 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
   }
 }
 
-/**
- * Admin role middleware
- */
 export async function requireAdmin(request: FastifyRequest, reply: FastifyReply) {
   await authenticate(request, reply);
   
@@ -38,9 +32,6 @@ export async function requireAdmin(request: FastifyRequest, reply: FastifyReply)
   }
 }
 
-/**
- * Member or Admin role middleware
- */
 export async function requireMemberOrAdmin(request: FastifyRequest, reply: FastifyReply) {
   await authenticate(request, reply);
   
@@ -50,9 +41,6 @@ export async function requireMemberOrAdmin(request: FastifyRequest, reply: Fasti
   }
 }
 
-/**
- * Optional authentication middleware (doesn't throw if no token)
- */
 export async function optionalAuth(request: FastifyRequest, reply: FastifyReply) {
   try {
     const token = request.headers.authorization?.replace('Bearer ', '');
@@ -61,6 +49,5 @@ export async function optionalAuth(request: FastifyRequest, reply: FastifyReply)
       (request as any).user = decoded;
     }
   } catch (error) {
-    // Do nothing - authentication is optional
   }
 }

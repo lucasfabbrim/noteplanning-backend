@@ -8,18 +8,17 @@ datasource db {
 }
 
 model Customer {
-  id                   String       @id @default(cuid())
-  email                String       @unique
+  id                   String     @id @default(cuid())
+  email                String     @unique
   name                 String
   password             String
-  role                 Role         @default(FREE)
-  isActive             Boolean      @default(true)
+  role                 Role       @default(FREE)
+  isActive             Boolean    @default(true)
   resetPasswordToken   String?
   resetPasswordExpires DateTime?
-  createdAt            DateTime     @default(now())
-  updatedAt            DateTime     @updatedAt
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
   deactivatedAt        DateTime?
-  memberships          Membership[]
   purchases            Purchase[]
 
   @@index([email])
@@ -82,21 +81,6 @@ model Video {
   @@index([isPublished])
   @@index([categoryId])
   @@map("videos")
-}
-
-model Membership {
-  id            String    @id @default(cuid())
-  customerId    String
-  startDate     DateTime  @default(now())
-  endDate       DateTime
-  isActive      Boolean   @default(true)
-  planType      String    @default("monthly")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  deactivatedAt DateTime?
-  customer      Customer  @relation(fields: [customerId], references: [id])
-
-  @@map("memberships")
 }
 
 model Purchase {

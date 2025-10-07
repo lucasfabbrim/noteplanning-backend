@@ -2,9 +2,6 @@ import { Resend } from 'resend';
 import { env } from '@/config';
 import { LoggerHelper } from '@/utils/logger.helper';
 
-/**
- * Email service using Resend
- */
 export class EmailService {
   private resend: Resend;
 
@@ -12,9 +9,6 @@ export class EmailService {
     this.resend = new Resend(env.RESEND_API_KEY);
   }
 
-  /**
-   * Send welcome email with login credentials
-   */
   async sendWelcomeEmail(
     to: string,
     name: string,
@@ -64,9 +58,6 @@ export class EmailService {
     }
   }
 
-  /**
-   * Send purchase confirmation email
-   */
   async sendPurchaseConfirmation(
     to: string,
     name: string,

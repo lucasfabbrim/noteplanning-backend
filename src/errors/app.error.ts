@@ -1,6 +1,3 @@
-/**
- * Custom application error class
- */
 export class AppError extends Error {
   public readonly statusCode: number;
   public readonly isOperational: boolean;
@@ -14,9 +11,6 @@ export class AppError extends Error {
   }
 }
 
-/**
- * Predefined error types
- */
 export class ValidationError extends AppError {
   constructor(message: string) {
     super(message, 400);

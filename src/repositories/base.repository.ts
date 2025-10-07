@@ -1,9 +1,5 @@
 import { PrismaClient } from '@prisma/client';
 
-/**
- * Base repository class that provides common database operations
- * Implements the Repository pattern for data access layer
- */
 export abstract class BaseRepository<T> {
   protected prisma: PrismaClient;
 
@@ -11,9 +7,6 @@ export abstract class BaseRepository<T> {
     this.prisma = prisma;
   }
 
-  /**
-   * Get paginated results with common filters
-   */
   protected async getPaginatedResults(
     model: any,
     options: {
@@ -53,9 +46,6 @@ export abstract class BaseRepository<T> {
     };
   }
 
-  /**
-   * Apply soft delete by setting deactivatedAt
-   */
   protected async softDelete(model: any, id: string) {
     return model.update({
       where: { id },
@@ -63,9 +53,6 @@ export abstract class BaseRepository<T> {
     });
   }
 
-  /**
-   * Check if record exists and is active
-   */
   protected async existsAndActive(model: any, id: string): Promise<boolean> {
     const record = await model.findFirst({
       where: {

@@ -1,9 +1,6 @@
 import pino from 'pino';
 import { env } from './env';
 
-/**
- * Logger configuration using Pino
- */
 export const logger = pino({
   level: env.LOG_LEVEL,
   transport: env.NODE_ENV === 'development' ? {
@@ -26,9 +23,6 @@ export const logger = pino({
   },
 });
 
-/**
- * Create child logger with context
- */
 export const createLogger = (context: string) => {
   return logger.child({ context });
 };

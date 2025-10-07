@@ -3,17 +3,17 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { env } from '@/config';
-import { requireAdmin } from '@/middleware';
+import { requireAdmin, authenticate } from '@/middleware';
+import { sanitizeCustomers, sanitizeCustomer, sanitizePurchases } from '@/utils/response-sanitizer';
 
 export async function customersRoutes(fastify: FastifyInstance) {
   const prisma = new PrismaClient();
 
-  // GET /customers - List all customers (Admin only)
   fastify.get('/', {
     preHandler: [requireAdmin],
     schema: {
       description: 'Get all customers with pagination (Admin only)',
-      tags: ['customers'],
+      tags: ['Customers'],
       security: [{ bearerAuth: [] }]
     }
   }, async (request, reply) => {
@@ -35,7 +35,7 @@ export async function customersRoutes(fastify: FastifyInstance) {
       return reply.status(200).send({
         success: true,
         message: 'Customers retrieved successfully',
-        data: customers,
+        data: sanitizeCustomers(customers),
         total: customers.length
       });
     } catch (error) {
@@ -47,12 +47,11 @@ export async function customersRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // GET /customers/:id - Get customer by ID (Admin only)
   fastify.get('/:id', {
     preHandler: [requireAdmin],
     schema: {
       description: 'Get customer by ID (Admin only)',
-      tags: ['customers'],
+      tags: ['Customers by ID'],
       security: [{ bearerAuth: [] }]
     }
   }, async (request, reply) => {
@@ -71,16 +70,6 @@ export async function customersRoutes(fastify: FastifyInstance) {
           isActive: true,
           createdAt: true,
           updatedAt: true,
-          memberships: {
-            where: { deactivatedAt: null },
-            select: {
-              id: true,
-              startDate: true,
-              endDate: true,
-              isActive: true,
-              planType: true
-            }
-          },
           purchases: {
             where: { deactivatedAt: null },
             select: {
@@ -103,7 +92,7 @@ export async function customersRoutes(fastify: FastifyInstance) {
       return reply.status(200).send({
         success: true,
         message: 'Customer found',
-        data: customer
+        data: sanitizeCustomer(customer)
       });
     } catch (error) {
       return reply.status(500).send({ 
@@ -114,12 +103,11 @@ export async function customersRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // GET /customers/email/:email - Get customer by email (Admin only)
   fastify.get('/email/:email', {
     preHandler: [requireAdmin],
     schema: {
       description: 'Get customer by email (Admin only)',
-      tags: ['customers'],
+      tags: ['Customers by E-mail'],
       security: [{ bearerAuth: [] }],
       params: {
         type: 'object',
@@ -155,7 +143,7 @@ export async function customersRoutes(fastify: FastifyInstance) {
         });
       }
       
-      return reply.status(200).send({ success: true, message: 'Customer found', data: customer });
+      return reply.status(200).send({ success: true, message: 'Customer found', data: sanitizeCustomer(customer) });
     } catch (error) {
       return reply.status(404).send({ 
         success: false, 
@@ -164,106 +152,11 @@ export async function customersRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // POST /customers - Create new customer (Admin only)
-  fastify.post('/', {
-    preHandler: [requireAdmin],
-    schema: {
-      description: 'Create a new customer (Admin only)',
-      tags: ['customers'],
-      security: [{ bearerAuth: [] }],
-      body: {
-        type: 'object',
-        properties: {
-          email: { type: 'string', format: 'email' },
-          name: { type: 'string', minLength: 2, maxLength: 100 },
-          password: { type: 'string', minLength: 6, maxLength: 100 }
-        },
-        required: ['email', 'name', 'password']
-      },
-      response: {
-        201: {
-          type: 'object',
-          properties: {
-            success: { type: 'boolean' },
-            message: { type: 'string' },
-            data: { type: 'object' }
-          }
-        },
-        400: {
-          type: 'object',
-          properties: {
-            success: { type: 'boolean' },
-            message: { type: 'string' }
-          }
-        },
-        401: {
-          type: 'object',
-          properties: {
-            success: { type: 'boolean' },
-            message: { type: 'string' }
-          }
-        }
-      }
-    }
-  }, async (request, reply) => {
-    try {
-      const body = request.body as any;
-      // Check if email is already taken
-      const existingCustomer = await prisma.customer.findFirst({
-        where: { 
-          email: body.email,
-          deactivatedAt: null 
-        }
-      });
-      
-      if (existingCustomer) {
-        return reply.status(400).send({ 
-          success: false, 
-          message: 'Email is already taken' 
-        });
-      }
-      
-      // Hash password
-      const hashedPassword = await bcrypt.hash(body.password, 10);
-      
-      const customer = await prisma.customer.create({
-        data: {
-          email: body.email,
-          name: body.name,
-          password: hashedPassword,
-          role: 'FREE',
-          isActive: true
-        },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          role: true,
-          isActive: true,
-          createdAt: true,
-          updatedAt: true
-        }
-      });
-      
-      return reply.status(201).send({ 
-        success: true, 
-        message: 'Customer created successfully', 
-        data: customer 
-      });
-    } catch (error) {
-      return reply.status(400).send({ 
-        success: false, 
-        message: error instanceof Error ? error.message : 'Failed to create customer' 
-      });
-    }
-  });
-
-  // PUT /customers/:id - Update customer (Admin only)
   fastify.put('/:id', {
     preHandler: [requireAdmin],
     schema: {
       description: 'Update customer by ID (Admin only)',
-      tags: ['customers'],
+      tags: ['Customers by ID'],
       security: [{ bearerAuth: [] }],
       params: {
         type: 'object',
@@ -329,12 +222,11 @@ export async function customersRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // DELETE /customers/:id - Delete customer (soft delete) (Admin only)
   fastify.delete('/:id', {
     preHandler: [requireAdmin],
     schema: {
       description: 'Delete customer by ID (soft delete) (Admin only)',
-      tags: ['customers'],
+      tags: ['Customers by ID'],
       security: [{ bearerAuth: [] }],
       params: {
         type: 'object',
@@ -375,68 +267,11 @@ export async function customersRoutes(fastify: FastifyInstance) {
     }
   });
 
-
-  // GET /customers/stats - Get customer statistics (Admin only)
-  fastify.get('/stats', {
-    preHandler: [requireAdmin],
-    schema: {
-      description: 'Get customer statistics (Admin only)',
-      tags: ['customers'],
-      security: [{ bearerAuth: [] }]
-    }
-  }, async (request, reply) => {
-    try {
-      const totalCustomers = await prisma.customer.count({
-        where: { deactivatedAt: null }
-      });
-      
-      const activeCustomers = await prisma.customer.count({
-        where: { 
-          deactivatedAt: null,
-          isActive: true 
-        }
-      });
-      
-      const freeCustomers = await prisma.customer.count({
-        where: { 
-          deactivatedAt: null,
-          role: 'FREE' 
-        }
-      });
-      
-      const memberCustomers = await prisma.customer.count({
-        where: { 
-          deactivatedAt: null,
-          role: 'MEMBER' 
-        }
-      });
-      
-      const stats = {
-        success: true,
-        message: 'Customer statistics retrieved successfully',
-        data: {
-          total: totalCustomers,
-          active: activeCustomers,
-          free: freeCustomers,
-          members: memberCustomers
-        }
-      };
-      
-      return reply.status(200).send(stats);
-    } catch (error) {
-      return reply.status(500).send({ 
-        success: false, 
-        message: 'Failed to get customer statistics' 
-      });
-    }
-  });
-
-  // POST /customers/forgot-password - Request password reset (Admin only for security)
   fastify.post('/forgot-password', {
     preHandler: [requireAdmin],
     schema: {
       description: 'Request password reset token (Admin only)',
-      tags: ['auth'],
+      tags: ['Authentication'],
       security: [{ bearerAuth: [] }],
       body: {
         type: 'object',
@@ -457,7 +292,6 @@ export async function customersRoutes(fastify: FastifyInstance) {
         }
       });
       
-      // Always return success even if email doesn't exist (security best practice)
       if (!customer) {
         return reply.status(200).send({
           success: true,
@@ -465,12 +299,10 @@ export async function customersRoutes(fastify: FastifyInstance) {
         });
       }
       
-      // Generate reset token
       const resetToken = jwt.sign({ id: customer.id }, env.JWT_SECRET, {
         expiresIn: '1h'
       } as jwt.SignOptions);
       
-      // Set reset token and expiration
       await prisma.customer.update({
         where: { id: customer.id },
         data: {
@@ -479,7 +311,6 @@ export async function customersRoutes(fastify: FastifyInstance) {
         }
       });
       
-      // Return token only in development
       return reply.status(200).send({
         success: true,
         message: 'Reset token generated',
@@ -493,12 +324,11 @@ export async function customersRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // POST /customers/reset-password - Reset password with token (Admin only)
   fastify.post('/reset-password', {
     preHandler: [requireAdmin],
     schema: {
       description: 'Reset password using reset token (Admin only)',
-      tags: ['auth'],
+      tags: ['Authentication'],
       security: [{ bearerAuth: [] }],
       body: {
         type: 'object',
@@ -513,7 +343,6 @@ export async function customersRoutes(fastify: FastifyInstance) {
     try {
       const body = request.body as { token: string; newPassword: string };
       
-      // Verify token
       let decoded: any;
       try {
         decoded = jwt.verify(body.token, env.JWT_SECRET);
@@ -524,7 +353,6 @@ export async function customersRoutes(fastify: FastifyInstance) {
         });
       }
       
-      // Find customer with valid reset token
       const customer = await prisma.customer.findFirst({
         where: {
           id: decoded.id,
@@ -543,10 +371,8 @@ export async function customersRoutes(fastify: FastifyInstance) {
         });
       }
       
-      // Hash new password
       const hashedPassword = await bcrypt.hash(body.newPassword, 10);
       
-      // Update password and clear reset token
       await prisma.customer.update({
         where: { id: customer.id },
         data: {
@@ -564,6 +390,352 @@ export async function customersRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ 
         success: false, 
         message: 'Invalid token' 
+      });
+    }
+  });
+
+  fastify.get('/purchases', {
+    preHandler: [authenticate],
+    schema: {
+      description: 'Get current user\'s purchases',
+      tags: ['Purchases by Customer'],
+      security: [{ bearerAuth: [] }],
+      querystring: {
+        type: 'object',
+        properties: {
+          page: { type: 'string', default: '1' },
+          limit: { type: 'string', default: '10' },
+          status: { type: 'string' },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const user = (request as any).user;
+      const query = request.query as { 
+        page?: string;
+        limit?: string;
+        status?: string;
+      };
+
+      const page = parseInt(query.page || '1');
+      const limit = parseInt(query.limit || '10');
+      const skip = (page - 1) * limit;
+
+      const where: any = {
+        customerId: user.id,
+        deactivatedAt: null,
+      };
+
+      if (query.status) {
+        where.status = query.status;
+      }
+
+      const [purchases, total] = await Promise.all([
+        prisma.purchase.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        }),
+        prisma.purchase.count({ where }),
+      ]);
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Your purchases retrieved successfully',
+        data: sanitizePurchases(purchases),
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
+    } catch (error) {
+      return reply.status(500).send({
+        success: false,
+        message: 'Failed to get purchases',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  fastify.get('/:id/purchases', {
+    preHandler: [requireAdmin],
+    schema: {
+      description: 'Get customer purchases (Admin only)',
+      tags: ['Purchases by Customer'],
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+        },
+        required: ['id'],
+      },
+      querystring: {
+        type: 'object',
+        properties: {
+          page: { type: 'string', default: '1' },
+          limit: { type: 'string', default: '10' },
+          status: { type: 'string' },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const query = request.query as { 
+        page?: string;
+        limit?: string;
+        status?: string;
+      };
+
+      const customer = await prisma.customer.findFirst({
+        where: { 
+          id,
+          deactivatedAt: null 
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      });
+
+      if (!customer) {
+        return reply.status(404).send({
+          success: false,
+          message: 'Customer not found',
+        });
+      }
+
+      const page = parseInt(query.page || '1');
+      const limit = parseInt(query.limit || '10');
+      const skip = (page - 1) * limit;
+
+      const where: any = {
+        customerId: id,
+        deactivatedAt: null,
+      };
+
+      if (query.status) {
+        where.status = query.status;
+      }
+
+      const [purchases, total] = await Promise.all([
+        prisma.purchase.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        }),
+        prisma.purchase.count({ where }),
+      ]);
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Customer purchases retrieved successfully',
+        data: {
+          customer,
+          purchases,
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit),
+          },
+        },
+      });
+    } catch (error) {
+      return reply.status(500).send({
+        success: false,
+        message: 'Failed to get customer purchases',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  fastify.post('/:id/purchases', {
+    preHandler: [requireAdmin],
+    schema: {
+      description: 'Create purchase for customer (Admin only)',
+      tags: ['Purchases by Customer'],
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+        },
+        required: ['id'],
+      },
+      body: {
+        type: 'object',
+        properties: {
+          amount: { type: 'number', minimum: 0 },
+          paymentAmount: { type: 'number', minimum: 0 },
+          event: { type: 'string', default: 'payment.completed' },
+          status: { type: 'string', default: 'completed' },
+          customerName: { type: 'string' },
+          customerEmail: { type: 'string', format: 'email' },
+          customerPhone: { type: 'string' },
+          customerTaxId: { type: 'string' },
+          products: { type: 'array' },
+          paymentMethod: { type: 'string', default: 'manual' },
+          transactionId: { type: 'string' },
+          webhookData: { type: 'object' },
+          devMode: { type: 'boolean', default: false },
+        },
+        required: ['amount', 'customerName', 'customerEmail'],
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const body = request.body as any;
+
+      const customer = await prisma.customer.findFirst({
+        where: { 
+          id,
+          deactivatedAt: null 
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      });
+
+      if (!customer) {
+        return reply.status(404).send({
+          success: false,
+          message: 'Customer not found',
+        });
+      }
+
+      const purchase = await prisma.purchase.create({
+        data: {
+          customerId: id,
+          amount: body.amount,
+          paymentAmount: body.paymentAmount || body.amount,
+          event: body.event || 'payment.completed',
+          status: body.status || 'completed',
+          customerName: body.customerName,
+          customerEmail: body.customerEmail,
+          customerPhone: body.customerPhone,
+          customerTaxId: body.customerTaxId,
+          products: body.products,
+          paymentMethod: body.paymentMethod || 'manual',
+          transactionId: body.transactionId || `manual_${Date.now()}`,
+          webhookData: body.webhookData,
+          devMode: body.devMode || false,
+        },
+        include: {
+          customer: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      });
+
+      return reply.status(201).send({
+        success: true,
+        message: 'Purchase created successfully',
+        data: purchase,
+      });
+    } catch (error) {
+      return reply.status(500).send({
+        success: false,
+        message: 'Failed to create purchase',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  fastify.delete('/:id/purchases/:purchaseId', {
+    preHandler: [requireAdmin],
+    schema: {
+      description: 'Delete purchase (Admin only)',
+      tags: ['Purchases by Customer'],
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          purchaseId: { type: 'string' },
+        },
+        required: ['id', 'purchaseId'],
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const { id, purchaseId } = request.params as { id: string; purchaseId: string };
+
+      const customer = await prisma.customer.findFirst({
+        where: { 
+          id,
+          deactivatedAt: null 
+        },
+      });
+
+      if (!customer) {
+        return reply.status(404).send({
+          success: false,
+          message: 'Customer not found',
+        });
+      }
+
+      const purchase = await prisma.purchase.findFirst({
+        where: {
+          id: purchaseId,
+          customerId: id,
+          deactivatedAt: null,
+        },
+      });
+
+      if (!purchase) {
+        return reply.status(404).send({
+          success: false,
+          message: 'Purchase not found',
+        });
+      }
+
+      await prisma.purchase.update({
+        where: { id: purchaseId },
+        data: { deactivatedAt: new Date() },
+      });
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Purchase deleted successfully',
+      });
+    } catch (error) {
+      return reply.status(500).send({
+        success: false,
+        message: 'Failed to delete purchase',
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   });

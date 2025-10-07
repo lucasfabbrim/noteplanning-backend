@@ -1,14 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 
-/**
- * Database configuration and Prisma client instance
- */
 class DatabaseConfig {
   private static instance: PrismaClient;
 
-  /**
-   * Get singleton instance of Prisma client
-   */
   public static getInstance(): PrismaClient {
     if (!DatabaseConfig.instance) {
       DatabaseConfig.instance = new PrismaClient({
@@ -19,9 +13,6 @@ class DatabaseConfig {
     return DatabaseConfig.instance;
   }
 
-  /**
-   * Connect to database
-   */
   public static async connect(): Promise<void> {
     try {
       const prisma = DatabaseConfig.getInstance();
@@ -32,21 +23,14 @@ class DatabaseConfig {
     }
   }
 
-  /**
-   * Disconnect from database
-   */
   public static async disconnect(): Promise<void> {
     try {
       const prisma = DatabaseConfig.getInstance();
       await prisma.$disconnect();
     } catch (error) {
-      // Silent disconnect error
     }
   }
 
-  /**
-   * Health check for database connection
-   */
   public static async healthCheck(): Promise<boolean> {
     try {
       const prisma = DatabaseConfig.getInstance();
@@ -58,9 +42,6 @@ class DatabaseConfig {
   }
 }
 
-/**
- * Export singleton Prisma instance
- */
 export const prisma = DatabaseConfig.getInstance();
 
 export { DatabaseConfig };

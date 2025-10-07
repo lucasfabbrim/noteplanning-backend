@@ -1,18 +1,18 @@
 import { FastifyInstance } from 'fastify';
 import { CustomerController } from '@/controllers';
-import { CustomerRepository } from '@/repositories';
+import { CustomerService } from '@/services';
 import { PrismaClient } from '@prisma/client';
+import { sanitizeCustomer } from '@/utils/response-sanitizer';
 
 export async function authRoutes(fastify: FastifyInstance) {
   const prisma = new PrismaClient();
   const customerController = new CustomerController(prisma);
-  const customerRepository = new CustomerRepository(prisma);
+  const customerService = new CustomerService(prisma);
 
-  // POST /auth/login - Login
   fastify.post('/login', {
     schema: {
       description: 'User login',
-      tags: ['auth'],
+      tags: ['Authentication'],
       body: {
         type: 'object',
         properties: {
@@ -23,14 +23,29 @@ export async function authRoutes(fastify: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    return customerController.loginCustomer(request as any, reply);
+    try {
+      const body = request.body as { email: string; password: string };
+      const result = await customerService.authenticateCustomer(body.email, body.password);
+      
+      return reply.status(200).send({
+        success: true,
+        message: 'Login successful',
+        data: {
+          token: result.token
+        }
+      });
+    } catch (error) {
+      return reply.status(401).send({
+        success: false,
+        message: error instanceof Error ? error.message : 'Authentication failed'
+      });
+    }
   });
 
-  // POST /auth/register - Register
   fastify.post('/register', {
     schema: {
       description: 'User registration',
-      tags: ['auth'],
+      tags: ['Authentication'],
       body: {
         type: 'object',
         properties: {
@@ -45,11 +60,10 @@ export async function authRoutes(fastify: FastifyInstance) {
     return customerController.createCustomer(request as any, reply);
   });
 
-  // POST /auth/logout - Logout
   fastify.post('/logout', {
     schema: {
       description: 'User logout',
-      tags: ['auth'],
+      tags: ['Authentication'],
     },
   }, async (request, reply) => {
     return reply.status(200).send({

@@ -1,12 +1,10 @@
 import { z } from 'zod';
 
-// Common pagination schema
 export const paginationSchema = z.object({
   page: z.number().int().positive().default(1),
   limit: z.number().int().positive().max(100).default(10),
 });
 
-// Common query parameters schema
 export const commonQuerySchema = z.object({
   page: z.string().optional().transform((val) => val ? parseInt(val, 10) : 1),
   limit: z.string().optional().transform((val) => val ? parseInt(val, 10) : 10),
@@ -15,7 +13,6 @@ export const commonQuerySchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
 });
 
-// Common response schemas
 export const paginatedResponseSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
   z.object({
     data: z.array(dataSchema),
@@ -29,14 +26,12 @@ export const paginatedResponseSchema = <T extends z.ZodTypeAny>(dataSchema: T) =
     }),
   });
 
-// Success response schema
 export const successResponseSchema = z.object({
   success: z.boolean(),
   message: z.string(),
   data: z.any().optional(),
 });
 
-// Error response schema
 export const errorResponseSchema = z.object({
   success: z.boolean(),
   message: z.string(),
@@ -44,7 +39,6 @@ export const errorResponseSchema = z.object({
   details: z.any().optional(),
 });
 
-// Type exports
 export type Pagination = z.infer<typeof paginationSchema>;
 export type CommonQuery = z.infer<typeof commonQuerySchema>;
 export type SuccessResponse<T = any> = {

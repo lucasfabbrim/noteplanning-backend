@@ -1,144 +1,26 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { BaseController } from './base.controller';
-import { AbacatePayService } from '@/services/abacatepay.service';
-import { 
-  abacatePayWebhookBodySchema, 
-  abacatePayWebhookQuerySchema,
-  AbacatePayWebhookBody,
-  AbacatePayWebhookQuery
-} from '@/validators/abacatepay.validator';
-import { env } from '@/config';
-import { LoggerHelper } from '@/utils/logger.helper';
+import { AbacatePayService } from '@/services';
 
-/**
- * AbacatePay webhook controller
- */
 export class AbacatePayController extends BaseController {
-  protected abacatePayService: AbacatePayService;
+  private abacatePayService: AbacatePayService;
 
   constructor(prisma: PrismaClient) {
     super();
     this.abacatePayService = new AbacatePayService(prisma);
   }
 
-  /**
-   * POST /webhook/abacatepay - Receive webhook from AbacatePay
-   */
+  async handleGetRequest(request: FastifyRequest, reply: FastifyReply) {
+    return this.sendError(reply, 'GET method not supported for webhook', 405);
+  }
+
   async handleWebhook(request: FastifyRequest, reply: FastifyReply) {
     try {
-      // Try HMAC verification first (new method)
-      const signature = request.headers['x-webhook-signature'] as string;
-      
-      if (signature) {
-        // HMAC verification method
-        const rawBody = JSON.stringify(request.body);
-        const isValidSignature = this.abacatePayService.verifyAbacateSignature(rawBody, signature);
-
-        if (!isValidSignature) {
-          LoggerHelper.warn('AbacatePayController', 'handleWebhook', 'Invalid HMAC signature', {
-            ip: request.ip,
-          });
-
-          return reply.status(401).send({
-            success: false,
-            message: 'Invalid signature',
-          });
-        }
-      } else {
-        // Fallback to query string secret (legacy method)
-        const queryValidation = abacatePayWebhookQuerySchema.safeParse(request.query);
-        
-        if (!queryValidation.success) {
-          return reply.status(400).send({
-            success: false,
-            message: 'Missing webhook secret or signature',
-          });
-        }
-
-        const query = queryValidation.data as AbacatePayWebhookQuery;
-
-        // Validate webhook secret
-        const isValidSecret = this.abacatePayService.validateWebhookSecret(
-          query.webhookSecret,
-          env.ABACATEPAY_TOKEN_SECRET
-        );
-
-        if (!isValidSecret) {
-          LoggerHelper.warn('AbacatePayController', 'handleWebhook', 'Invalid webhook secret', {
-            ip: request.ip,
-          });
-
-          return reply.status(401).send({
-            success: false,
-            message: 'Unauthorized',
-          });
-        }
-      }
-
-      // Validate webhook body
-      const bodyValidation = abacatePayWebhookBodySchema.safeParse(request.body);
-
-      if (!bodyValidation.success) {
-        return reply.status(400).send({
-          success: false,
-          message: 'Invalid request',
-        });
-      }
-
-      const webhookData = bodyValidation.data as AbacatePayWebhookBody;
-
-      // Process webhook
-      const result = await this.abacatePayService.handleWebhookEvent(webhookData);
-
-      if (!result) {
-        return reply.status(200).send({
-          success: true,
-          message: 'Webhook received but no action taken',
-        });
-      }
-
-      const { customer, purchase } = result;
-
-      return reply.status(201).send({
-        success: true,
-        message: 'Customer e compra registrados com sucesso',
-        data: {
-          customer: {
-            id: customer.id,
-            name: customer.name,
-            email: customer.email,
-            role: customer.role,
-            createdAt: customer.createdAt,
-          },
-          purchase: {
-            id: purchase.id,
-            amount: purchase.amount,
-            paymentAmount: purchase.paymentAmount,
-            status: purchase.status,
-            products: purchase.products,
-            createdAt: purchase.createdAt,
-          },
-        },
-      });
+      const result = await this.abacatePayService.processWebhook(request);
+      return this.sendSuccess(reply, result, 'Webhook processed successfully');
     } catch (error) {
-      LoggerHelper.error('AbacatePayController', 'handleWebhook', 'Failed to process webhook', error);
-
-      return reply.status(500).send({
-        success: false,
-        message: 'Internal server error',
-      });
+      return this.handleServiceError(reply, error);
     }
   }
-
-  /**
-   * GET /webhook/abacatepay - Not supported
-   */
-  async handleGetRequest(request: FastifyRequest, reply: FastifyReply) {
-    return reply.status(405).send({
-      success: false,
-      message: 'Method GET not supported. Use POST.',
-    });
-  }
 }
-

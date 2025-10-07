@@ -21,9 +21,6 @@ export class CustomerService extends BaseService {
     this.customerRepository = new CustomerRepository(prisma);
   }
 
-  /**
-   * Get all customers with pagination and filters
-   */
   async getAllCustomers(query: CustomerQuery) {
     try {
       const result = await this.customerRepository.findAll(query);
@@ -37,9 +34,6 @@ export class CustomerService extends BaseService {
     }
   }
 
-  /**
-   * Get customer by ID
-   */
   async getCustomerById(id: string): Promise<CustomerWithRelations> {
     try {
       const customer = await this.customerRepository.findById(id);
@@ -52,9 +46,6 @@ export class CustomerService extends BaseService {
     }
   }
 
-  /**
-   * Get customer by email
-   */
   async getCustomerByEmail(email: string): Promise<CustomerResponse> {
     try {
       const customer = await this.customerRepository.findByEmail(email);
@@ -67,21 +58,15 @@ export class CustomerService extends BaseService {
     }
   }
 
-  /**
-   * Create a new customer
-   */
   async createCustomer(data: CreateCustomerInput): Promise<CustomerResponse> {
     try {
-      // Check if email is already taken
       const emailExists = await this.customerRepository.isEmailTaken(data.email);
       if (emailExists) {
         throw new Error('Email is already taken');
       }
 
-      // Hash password
       const hashedPassword = await bcrypt.hash(data.password, 10);
 
-      // Create customer
       const customer = await this.customerRepository.create({
         email: data.email,
         name: data.name,
@@ -90,7 +75,6 @@ export class CustomerService extends BaseService {
         isActive: true,
       });
 
-      // Return customer without password
       const { password, ...customerResponse } = customer;
       return customerResponse;
     } catch (error) {
@@ -98,18 +82,13 @@ export class CustomerService extends BaseService {
     }
   }
 
-  /**
-   * Update customer by ID
-   */
   async updateCustomer(id: string, data: UpdateCustomerInput): Promise<CustomerResponse> {
     try {
-      // Check if customer exists
       const exists = await this.customerRepository.exists(id);
       if (!exists) {
         throw new Error('Customer not found');
       }
 
-      // Check if email is taken by another customer
       if (data.email) {
         const emailExists = await this.customerRepository.isEmailTaken(data.email, id);
         if (emailExists) {
@@ -117,16 +96,13 @@ export class CustomerService extends BaseService {
         }
       }
 
-      // Hash password if provided
       const updateData: any = { ...data };
       if (data.password) {
         updateData.password = await bcrypt.hash(data.password, 10);
       }
 
-      // Update customer
       const customer = await this.customerRepository.update(id, updateData);
 
-      // Return customer without password
       const { password, ...customerResponse } = customer;
       return customerResponse;
     } catch (error) {
@@ -134,27 +110,19 @@ export class CustomerService extends BaseService {
     }
   }
 
-  /**
-   * Delete customer by ID (soft delete)
-   */
   async deleteCustomer(id: string): Promise<void> {
     try {
-      // Check if customer exists
       const exists = await this.customerRepository.exists(id);
       if (!exists) {
         throw new Error('Customer not found');
       }
 
-      // Soft delete customer
       await this.customerRepository.delete(id);
     } catch (error) {
       throw new Error(`Failed to delete customer: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
-  /**
-   * Authenticate customer
-   */
   async authenticateCustomer(email: string, password: string): Promise<CustomerLoginResponse> {
     try {
       console.log('Authenticating customer with email:', email);
@@ -173,7 +141,6 @@ export class CustomerService extends BaseService {
         throw new Error('Account is deactivated');
       }
 
-      // Generate JWT token
       const token = jwt.sign(
         { 
           id: customer.id, 
@@ -184,7 +151,6 @@ export class CustomerService extends BaseService {
         { expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions
       );
 
-      // Return standardized login response
       const { password: _, ...customerResponse } = customer;
       const result = {
         token,
@@ -205,24 +171,7 @@ export class CustomerService extends BaseService {
     }
   }
 
-  /**
-   * Get customer statistics
-   */
-  async getCustomerStats() {
-    try {
-      const stats = await this.customerRepository.getStats();
-      return {
-        success: true,
-        data: stats,
-      };
-    } catch (error) {
-      throw new Error(`Failed to get customer stats: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
 
-  /**
-   * Upgrade customer role to MEMBER
-   */
   async upgradeToMember(id: string): Promise<CustomerResponse> {
     try {
       const exists = await this.customerRepository.exists(id);

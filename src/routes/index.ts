@@ -1,5 +1,3 @@
 export { customersRoutes } from './customers.routes';
-export { videosRoutes } from './videos.routes';
-export { membershipsRoutes } from './memberships.routes';
+export { categoriesRoutes } from './categories.routes';
 export { abacatePayRoutes } from './abacatepay.routes';
-export { purchasesRoutes } from './purchases.routes';

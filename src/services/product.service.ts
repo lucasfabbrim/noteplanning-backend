@@ -2,17 +2,11 @@ import { PrismaClient, Product } from '@prisma/client';
 import { BaseService } from './base.service';
 import { LoggerHelper } from '@/utils/logger.helper';
 
-/**
- * Product service
- */
 export class ProductService extends BaseService {
   constructor(prisma: PrismaClient) {
     super(prisma);
   }
 
-  /**
-   * Create or update product from webhook data
-   */
   async createOrUpdateProduct(productData: {
     externalId: string;
     name?: string;
@@ -21,13 +15,11 @@ export class ProductService extends BaseService {
     categoryId?: string;
   }): Promise<Product> {
     try {
-      // Check if product already exists
       const existingProduct = await this.prisma.product.findUnique({
         where: { externalId: productData.externalId },
       });
 
       if (existingProduct) {
-        // Update existing product
         const updatedProduct = await this.prisma.product.update({
           where: { externalId: productData.externalId },
           data: {
@@ -46,7 +38,6 @@ export class ProductService extends BaseService {
 
         return updatedProduct;
       } else {
-        // Create new product
         const newProduct = await this.prisma.product.create({
           data: {
             externalId: productData.externalId,
@@ -71,9 +62,6 @@ export class ProductService extends BaseService {
     }
   }
 
-  /**
-   * Get all products
-   */
   async getAllProducts(): Promise<Product[]> {
     try {
       const products = await this.prisma.product.findMany({
@@ -96,9 +84,6 @@ export class ProductService extends BaseService {
     }
   }
 
-  /**
-   * Get product by external ID
-   */
   async getProductByExternalId(externalId: string): Promise<Product | null> {
     try {
       const product = await this.prisma.product.findUnique({
@@ -115,9 +100,6 @@ export class ProductService extends BaseService {
     }
   }
 
-  /**
-   * Update product category
-   */
   async updateProductCategory(externalId: string, categoryId: string): Promise<Product> {
     try {
       const product = await this.prisma.product.update({

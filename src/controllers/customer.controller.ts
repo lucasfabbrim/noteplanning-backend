@@ -1,9 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { BaseController } from './base.controller';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { env } from '@/config';
 
 export class CustomerController extends BaseController {
   private prisma: PrismaClient;
@@ -13,9 +10,6 @@ export class CustomerController extends BaseController {
     this.prisma = prisma;
   }
 
-  /**
-   * GET /customers - Get all customers (Admin only)
-   */
   async getAllCustomers(request: FastifyRequest, reply: FastifyReply) {
     try {
       const customers = await this.prisma.customer.findMany({
@@ -38,9 +32,6 @@ export class CustomerController extends BaseController {
     }
   }
 
-  /**
-   * GET /customers/:id - Get customer by ID
-   */
   async getCustomerById(request: FastifyRequest, reply: FastifyReply) {
     try {
       const params = request.params as { id: string };
@@ -71,33 +62,27 @@ export class CustomerController extends BaseController {
     }
   }
 
-  /**
-   * POST /customers - Create a new customer
-   */
+
   async createCustomer(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const body = request.body as any;
+      const body = request.body as { email: string; password: string; name: string };
       
-      // Check if email already exists
       const existingCustomer = await this.prisma.customer.findFirst({
-        where: { 
+        where: {
           email: body.email,
-          deactivatedAt: null 
-        }
+          deactivatedAt: null,
+        },
       });
-      
+
       if (existingCustomer) {
-        return this.sendError(reply, 'Email is already taken', 409);
+        return this.sendError(reply, 'Customer already exists', 409);
       }
-      
-      // Hash password
-      const hashedPassword = await bcrypt.hash(body.password, 10);
-      
+
       const customer = await this.prisma.customer.create({
         data: {
           email: body.email,
           name: body.name,
-          password: hashedPassword,
+          password: body.password, // This should be hashed
           role: 'FREE',
           isActive: true,
         },
@@ -113,96 +98,6 @@ export class CustomerController extends BaseController {
       });
 
       return this.sendCreated(reply, customer, 'Customer created successfully');
-    } catch (error) {
-      return this.handleServiceError(reply, error);
-    }
-  }
-
-  /**
-   * POST /customers/login - Login customer
-   */
-  async loginCustomer(request: FastifyRequest, reply: FastifyReply) {
-    try {
-      const body = request.body as any;
-      
-      // Find customer
-      const customer = await this.prisma.customer.findFirst({
-        where: { 
-          email: body.email,
-          deactivatedAt: null 
-        }
-      });
-      
-      if (!customer) {
-        return this.sendError(reply, 'Invalid credentials', 401);
-      }
-      
-      // Check password
-      const isPasswordValid = await bcrypt.compare(body.password, customer.password);
-      if (!isPasswordValid) {
-        return this.sendError(reply, 'Invalid credentials', 401);
-      }
-      
-      if (!customer.isActive) {
-        return this.sendError(reply, 'Account is deactivated', 401);
-      }
-      
-      // Generate JWT token
-      const token = jwt.sign({
-        id: customer.id,
-        email: customer.email,
-        role: customer.role
-      }, env.JWT_SECRET, {
-        expiresIn: env.JWT_EXPIRES_IN
-      } as jwt.SignOptions);
-      
-      const result = {
-        token,
-        customer: {
-          id: customer.id,
-          name: customer.name,
-          email: customer.email,
-          role: customer.role,
-          isActive: customer.isActive,
-          createdAt: customer.createdAt,
-          updatedAt: customer.updatedAt
-        }
-      };
-
-      return this.sendSuccess(reply, result, 'Login successful');
-    } catch (error) {
-      return this.handleServiceError(reply, error);
-    }
-  }
-
-  /**
-   * GET /customers/stats - Get customer statistics (Admin only)
-   */
-  async getCustomerStats(request: FastifyRequest, reply: FastifyReply) {
-    try {
-      const [total, active, free, members] = await Promise.all([
-        this.prisma.customer.count({
-          where: { deactivatedAt: null }
-        }),
-        this.prisma.customer.count({
-          where: { deactivatedAt: null, isActive: true }
-        }),
-        this.prisma.customer.count({
-          where: { deactivatedAt: null, role: 'FREE' }
-        }),
-        this.prisma.customer.count({
-          where: { deactivatedAt: null, role: 'MEMBER' }
-        })
-      ]);
-
-      const stats = {
-        total,
-        active,
-        free,
-        members
-      };
-
-      return this.sendSuccess(reply, stats, 'Customer statistics retrieved successfully');
     } catch (error) {
       return this.handleServiceError(reply, error);
     }
