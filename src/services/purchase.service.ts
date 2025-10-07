@@ -87,6 +87,12 @@ export class PurchaseService extends BaseService {
     products?: any[];
   }) {
     try {
+      // Buscar dados do customer para preencher corretamente
+      const customer = await this.prisma.customer.findUnique({
+        where: { id: data.customerId },
+        select: { name: true, email: true }
+      });
+
       const purchase = await this.prisma.purchase.create({
         data: {
           customerId: data.customerId,
@@ -94,8 +100,10 @@ export class PurchaseService extends BaseService {
           paymentAmount: data.amount,
           event: 'purchase_created',
           status: data.status,
-          customerName: 'Customer',
-          customerEmail: 'customer@example.com',
+          customerName: customer?.name || 'Customer',
+          customerEmail: customer?.email || 'customer@example.com',
+          transactionId: data.externalId,
+          products: data.products ? data.products : undefined,
         },
         include: {
           customer: {

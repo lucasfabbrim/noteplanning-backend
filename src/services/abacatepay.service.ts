@@ -26,30 +26,47 @@ export class AbacatePayService extends BaseService {
 
     const { data } = body;
     
+    // Verificar se é um evento de billing
     if (data.billing?.customer?.metadata) {
       const customerData = data.billing.customer.metadata;
       
-      const customer = await this.customerService.createCustomer({
-        email: customerData.email,
-        name: customerData.name,
-        password: 'temp_password',
-      });
+      // Criar ou encontrar customer
+      let customer;
+      try {
+        customer = await this.customerService.createCustomer({
+          email: customerData.email,
+          name: customerData.name,
+          password: 'temp_password',
+        });
+      } catch (error) {
+        // Se customer já existe, buscar pelo email
+        const existingCustomer = await this.prisma.customer.findUnique({
+          where: { email: customerData.email }
+        });
+        if (existingCustomer) {
+          customer = existingCustomer;
+        } else {
+          throw error;
+        }
+      }
 
+      // Criar/atualizar produtos se existirem
       if (data.billing?.products) {
         for (const productData of data.billing.products) {
           await this.productService.createOrUpdateProduct(productData);
         }
       }
 
-      if (data.billing?.purchase) {
-        await this.purchaseService.createPurchase({
-          customerId: customer.id,
-          externalId: data.billing.purchase.id,
-          amount: data.billing.purchase.amount,
-          status: data.billing.purchase.status,
-          products: data.billing.products || [],
-        });
-      }
+      // Criar purchase - sempre criar se há dados de billing
+      const purchaseData = {
+        customerId: customer.id,
+        externalId: data.billing.purchase?.id || data.billing.id || `abacate_${Date.now()}`,
+        amount: data.billing.purchase?.amount || data.billing.amount || 0,
+        status: data.billing.purchase?.status || data.billing.status || 'completed',
+        products: data.billing.products || [],
+      };
+
+      await this.purchaseService.createPurchase(purchaseData);
     }
 
     return { success: true, message: 'Webhook processed successfully' };
