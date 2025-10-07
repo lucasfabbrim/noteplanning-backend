@@ -259,7 +259,7 @@
 
 ## 🎥 **VIDEOS BY CATEGORY** (`/v1/categories`)
 
-### **GET /v1/categories/:id/videos**
+### **GET /v1/categories/:slug/videos**
 **Query params:** `?isPublished=true&page=1&limit=10`
 **Response:**
 ```json
@@ -294,7 +294,7 @@
 }
 ```
 
-### **GET /v1/categories/:id/video/:videoId**
+### **GET /v1/categories/:slug/video/:videoSlug**
 **Response:**
 ```json
 {
@@ -319,11 +319,12 @@
 }
 ```
 
-### **POST /v1/categories/:id/video**
+### **POST /v1/categories/:slug/video**
 **Payload:**
 ```json
 {
   "title": "string",
+  "slug": "string",
   "description": "string",
   "url": "string",
   "thumbnail": "string",
@@ -332,11 +333,12 @@
 }
 ```
 
-### **PUT /v1/categories/:id/video/:videoId**
+### **PUT /v1/categories/:slug/video/:videoSlug**
 **Payload:**
 ```json
 {
   "title": "string",
+  "slug": "string",
   "description": "string",
   "url": "string",
   "thumbnail": "string",
@@ -345,7 +347,82 @@
 }
 ```
 
-### **DELETE /v1/categories/:id/video/:videoId**
+### **DELETE /v1/categories/:slug/video/:videoSlug**
+
+---
+
+## 📦 **PRODUCTS** (`/v1/products`)
+
+### **GET /v1/products** (Admin only)
+**Headers:** `Authorization: Bearer {token}`
+**Query params:** `?page=1&limit=10&isActive=true&categoryId=xxx`
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Products retrieved successfully",
+  "data": [
+    {
+      "id": "string",
+      "externalId": "string",
+      "name": "string",
+      "description": "string",
+      "price": 99.99,
+      "isActive": true,
+      "categoryId": "string",
+      "createdAt": "ISO date",
+      "updatedAt": "ISO date",
+      "category": {
+        "id": "string",
+        "name": "string",
+        "slug": "string"
+      }
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 5,
+    "totalPages": 1
+  }
+}
+```
+
+### **GET /v1/products/:id** (Admin only)
+**Headers:** `Authorization: Bearer {token}`
+
+### **GET /v1/products/external/:externalId** (Admin only)
+**Headers:** `Authorization: Bearer {token}`
+
+### **POST /v1/products** (Admin only)
+**Headers:** `Authorization: Bearer {token}`
+**Payload:**
+```json
+{
+  "externalId": "string",
+  "name": "string",
+  "description": "string",
+  "price": 99.99,
+  "categoryId": "string",
+  "isActive": true
+}
+```
+
+### **PUT /v1/products/:id** (Admin only)
+**Headers:** `Authorization: Bearer {token}`
+**Payload:**
+```json
+{
+  "name": "string",
+  "description": "string",
+  "price": 99.99,
+  "categoryId": "string",
+  "isActive": true
+}
+```
+
+### **DELETE /v1/products/:id** (Admin only)
+**Headers:** `Authorization: Bearer {token}`
 
 ---
 
@@ -415,7 +492,12 @@ curl -X GET https://noteplanning-backend.fly.dev/v1/categories
 
 ### Obter Vídeos de uma Categoria
 ```bash
-curl -X GET https://noteplanning-backend.fly.dev/v1/categories/{category_id}/videos
+curl -X GET https://noteplanning-backend.fly.dev/v1/categories/programming-basics/videos
+```
+
+### Obter Vídeo Específico
+```bash
+curl -X GET https://noteplanning-backend.fly.dev/v1/categories/programming-basics/video/introduction-to-nodejs
 ```
 
 ### Acessar Documentação

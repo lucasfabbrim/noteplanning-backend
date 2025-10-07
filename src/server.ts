@@ -9,6 +9,7 @@ import { errorHandler } from '@/middleware';
 import { authRoutes } from '@/routes/auth.routes';
 import { customersRoutes } from '@/routes/customers.routes';
 import { categoriesRoutes } from '@/routes/categories.routes';
+import { productsRoutes } from '@/routes/products.routes';
 import { abacatePayRoutes } from '@/routes/abacatepay.routes';
 
 const fastify = Fastify({
@@ -71,6 +72,7 @@ async function buildServer() {
           { name: 'Authentication', description: 'Authentication endpoints' },
           { name: 'Categories', description: 'Category management endpoints' },
           { name: 'Videos by Category', description: 'Video management within categories' },
+          { name: 'Products', description: 'Product management endpoints' },
         ],
       },
     });
@@ -111,6 +113,7 @@ async function buildServer() {
     await fastify.register(authRoutes, { prefix: '/v1/auth' });
     await fastify.register(customersRoutes, { prefix: '/v1/customers' });
     await fastify.register(categoriesRoutes, { prefix: '/v1/categories' });
+    await fastify.register(productsRoutes, { prefix: '/v1/products' });
     await fastify.register(abacatePayRoutes, { prefix: '/webhook' });
 
 
