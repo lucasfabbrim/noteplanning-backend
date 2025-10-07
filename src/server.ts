@@ -99,6 +99,14 @@ async function buildServer() {
 
     fastify.setErrorHandler(errorHandler);
 
+    fastify.get('/health', async (request, reply) => {
+      const isHealthy = await DatabaseConfig.healthCheck();
+      if (isHealthy) {
+        return reply.status(200).send({ status: 'ok', timestamp: new Date().toISOString() });
+      } else {
+        return reply.status(503).send({ status: 'error', message: 'Database connection failed' });
+      }
+    });
 
     await fastify.register(authRoutes, { prefix: '/v1/auth' });
     await fastify.register(customersRoutes, { prefix: '/v1/customers' });
