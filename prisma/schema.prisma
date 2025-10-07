@@ -67,6 +67,7 @@ model Product {
 model Video {
   id            String    @id @default(cuid())
   title         String
+  slug          String    @unique
   description   String?
   url           String
   thumbnail     String?
@@ -78,6 +79,7 @@ model Video {
   categoryId    String?
   Category      Category? @relation(fields: [categoryId], references: [id])
 
+  @@index([slug])
   @@index([isPublished])
   @@index([categoryId])
   @@map("videos")

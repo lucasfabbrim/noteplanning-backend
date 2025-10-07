@@ -104,6 +104,7 @@ async function main() {
   const video1 = await prisma.video.create({
     data: {
       title: 'Introduction to Node.js',
+      slug: 'introduction-to-nodejs',
       description: 'Learn the basics of Node.js development',
       url: 'https://example.com/videos/nodejs-intro.mp4',
       thumbnail: 'https://example.com/thumbnails/nodejs-intro.jpg',
@@ -116,6 +117,7 @@ async function main() {
   const video2 = await prisma.video.create({
     data: {
       title: 'Advanced TypeScript',
+      slug: 'advanced-typescript',
       description: 'Deep dive into TypeScript advanced features',
       url: 'https://example.com/videos/typescript-advanced.mp4',
       thumbnail: 'https://example.com/thumbnails/typescript-advanced.jpg',

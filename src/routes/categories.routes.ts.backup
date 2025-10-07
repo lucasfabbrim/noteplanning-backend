@@ -65,7 +65,7 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
       params: {
         type: 'object',
         properties: {
-          slug: { type: 'string' },
+          id: { type: 'string' },
         },
         required: ['id'],
       },
@@ -81,7 +81,6 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
             where: { isPublished: true },
             select: {
               id: true,
-          slug: true,
               title: true,
               description: true,
               thumbnail: true,
@@ -135,7 +134,6 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
             where: { isPublished: true },
             select: {
               id: true,
-          slug: true,
               title: true,
               description: true,
               thumbnail: true,
@@ -247,7 +245,6 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
           orderBy: { createdAt: 'desc' },
           select: {
             id: true,
-          slug: true,
             title: true,
             description: true,
             url: true,
@@ -284,22 +281,22 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
     }
   });
 
-  fastify.get('/:slug/video/:videoSlug', {
+  fastify.get('/:slug/video/:videoId', {
     schema: {
-      description: 'Get specific video by category slug and video slug',
+      description: 'Get specific video by category slug and video ID',
       tags: ['Videos by Category'],
       params: {
         type: 'object',
         properties: {
           slug: { type: 'string' },
-          videoSlug: { type: 'string' },
+          videoId: { type: 'string' },
         },
-        required: ['slug', 'videoSlug'],
+        required: ['slug', 'videoId'],
       },
     },
   }, async (request, reply) => {
     try {
-      const { slug, videoSlug } = request.params as { slug: string; videoSlug: string };
+      const { slug, videoId } = request.params as { slug: string; videoId: string };
 
       const category = await prisma.category.findFirst({
         where: {
@@ -323,13 +320,12 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
 
       const video = await prisma.video.findFirst({
         where: {
-          slug: videoSlug,
-          categoryId: category.id,
+          id: videoId,
+          categoryId: id,
           deactivatedAt: null,
         },
         select: {
           id: true,
-          slug: true,
           title: true,
           description: true,
           url: true,
@@ -365,37 +361,35 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
     }
   });
 
-  fastify.post('/:slug/video', {
+  fastify.post('/:id/video', {
     schema: {
       description: 'Create new video in category',
       tags: ['Videos by Category'],
       params: {
         type: 'object',
         properties: {
-          slug: { type: 'string' },
+          id: { type: 'string' },
         },
-        required: ['slug'],
+        required: ['id'],
       },
       body: {
         type: 'object',
         properties: {
           title: { type: 'string' },
-          slug: { type: 'string' },
           description: { type: 'string' },
           url: { type: 'string' },
           thumbnail: { type: 'string' },
           duration: { type: 'number' },
           isPublished: { type: 'boolean', default: false },
         },
-        required: ['title', 'slug', 'url'],
+        required: ['title', 'url'],
       },
     },
   }, async (request, reply) => {
     try {
-      const { slug } = request.params as { slug: string };
+      const { id } = request.params as { id: string };
       const body = request.body as {
         title: string;
-        slug: string;
         description?: string;
         url: string;
         thumbnail?: string;
@@ -405,13 +399,12 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
 
       const category = await prisma.category.findFirst({
         where: {
-          slug,
+          id,
           deactivatedAt: null,
           isActive: true
         },
         select: {
           id: true,
-          slug: true,
           name: true,
         },
       });
@@ -426,17 +419,15 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
       const video = await prisma.video.create({
         data: {
           title: body.title,
-          slug: body.slug,
           description: body.description,
           url: body.url,
           thumbnail: body.thumbnail,
           duration: body.duration,
           isPublished: body.isPublished || false,
-          categoryId: category.id,
+          categoryId: id,
         },
         select: {
           id: true,
-          slug: true,
           title: true,
           description: true,
           url: true,
@@ -465,23 +456,22 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
     }
   });
 
-  fastify.put('/:slug/video/:videoSlug', {
+  fastify.put('/:id/video/:videoId', {
     schema: {
       description: 'Update video in category',
       tags: ['Videos by Category'],
       params: {
         type: 'object',
         properties: {
-          slug: { type: 'string' },
-          videoSlug: { type: 'string' },
+          id: { type: 'string' },
+          videoId: { type: 'string' },
         },
-        required: ['slug', 'videoSlug'],
+        required: ['id', 'videoId'],
       },
       body: {
         type: 'object',
         properties: {
           title: { type: 'string' },
-          slug: { type: 'string' },
           description: { type: 'string' },
           url: { type: 'string' },
           thumbnail: { type: 'string' },
@@ -492,10 +482,9 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
     },
   }, async (request, reply) => {
     try {
-      const { slug, videoSlug } = request.params as { slug: string; videoSlug: string };
+      const { id, videoId } = request.params as { id: string; videoId: string };
       const body = request.body as {
         title?: string;
-        slug?: string;
         description?: string;
         url?: string;
         thumbnail?: string;
@@ -505,13 +494,12 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
 
       const category = await prisma.category.findFirst({
         where: {
-          slug,
+          id,
           deactivatedAt: null,
           isActive: true
         },
         select: {
           id: true,
-          slug: true,
           name: true,
         },
       });
@@ -525,8 +513,8 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
 
       const existingVideo = await prisma.video.findFirst({
         where: {
-          slug: videoSlug,
-          categoryId: category.id,
+          id: videoId,
+          categoryId: id,
           deactivatedAt: null,
         },
       });
@@ -539,10 +527,9 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
       }
 
       const video = await prisma.video.update({
-        where: { slug: videoSlug },
+        where: { id: videoId },
         data: {
           ...(body.title && { title: body.title }),
-          ...(body.slug && { slug: body.slug }),
           ...(body.description !== undefined && { description: body.description }),
           ...(body.url && { url: body.url }),
           ...(body.thumbnail !== undefined && { thumbnail: body.thumbnail }),
@@ -551,7 +538,6 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
         },
         select: {
           id: true,
-          slug: true,
           title: true,
           description: true,
           url: true,
@@ -580,32 +566,31 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
     }
   });
 
-  fastify.delete('/:slug/video/:videoSlug', {
+  fastify.delete('/:id/video/:videoId', {
     schema: {
       description: 'Delete video from category (soft delete)',
       tags: ['Videos by Category'],
       params: {
         type: 'object',
         properties: {
-          slug: { type: 'string' },
-          videoSlug: { type: 'string' },
+          id: { type: 'string' },
+          videoId: { type: 'string' },
         },
-        required: ['slug', 'videoSlug'],
+        required: ['id', 'videoId'],
       },
     },
   }, async (request, reply) => {
     try {
-      const { slug, videoSlug } = request.params as { slug: string; videoSlug: string };
+      const { id, videoId } = request.params as { id: string; videoId: string };
 
       const category = await prisma.category.findFirst({
         where: {
-          slug,
+          id,
           deactivatedAt: null,
           isActive: true
         },
         select: {
           id: true,
-          slug: true,
           name: true,
         },
       });
@@ -619,8 +604,8 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
 
       const existingVideo = await prisma.video.findFirst({
         where: {
-          slug: videoSlug,
-          categoryId: category.id,
+          id: videoId,
+          categoryId: id,
           deactivatedAt: null,
         },
       });
@@ -633,7 +618,7 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
       }
 
       await prisma.video.update({
-        where: { slug: videoSlug },
+        where: { id: videoId },
         data: {
           deactivatedAt: new Date(),
         },
