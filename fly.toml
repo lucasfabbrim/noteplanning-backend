@@ -29,7 +29,7 @@ primary_region = "gru"  # São Paulo region (updated from deprecated gig)
 [[vm]]
   cpu_kind = "shared"
   cpus = 1
-  memory_mb = 128
+  memory_mb = 256
 
 [[vm.regions]]
   region = "gru"
