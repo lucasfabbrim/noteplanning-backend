@@ -103,4 +103,84 @@ export class EmailService {
       return false;
     }
   }
+
+  async sendWelcomeEmailWithPassword(to: string, name: string, password: string): Promise<boolean> {
+    try {
+      const result = await this.resend.emails.send({
+        from: 'NotePlanning <noreply@noteplanning.com>',
+        to,
+        subject: 'Bem-vindo ao NotePlanning! Sua conta foi criada',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #333;">Bem-vindo ao NotePlanning, ${name}!</h2>
+            
+            <p>Obrigado pela sua compra! Sua conta foi criada com sucesso.</p>
+            
+            <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="color: #333; margin-top: 0;">Suas credenciais de acesso:</h3>
+              <p><strong>Email:</strong> ${to}</p>
+              <p><strong>Senha:</strong> ${password}</p>
+            </div>
+            
+            <p>Você pode acessar sua conta em:</p>
+            <p style="text-align: center; margin: 20px 0;">
+              <a href="https://membros.noteplanning.com" 
+                 style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                Acessar Minha Conta
+              </a>
+            </p>
+            
+            <p><strong>Importante:</strong> Por segurança, recomendamos que você altere sua senha após o primeiro login.</p>
+            
+            <p>Se você tiver alguma dúvida, não hesite em entrar em contato conosco.</p>
+            
+            <p>Atenciosamente,<br>Equipe NotePlanning</p>
+          </div>
+        `,
+      });
+
+      return true;
+    } catch (error) {
+      LoggerHelper.error('EmailService', 'sendWelcomeEmailWithPassword', 'Failed to send welcome email with password', error);
+      return false;
+    }
+  }
+
+  async sendExistingAccountEmail(to: string, name: string): Promise<boolean> {
+    try {
+      const result = await this.resend.emails.send({
+        from: 'NotePlanning <noreply@noteplanning.com>',
+        to,
+        subject: 'Nova compra realizada - NotePlanning',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #333;">Olá ${name}!</h2>
+            
+            <p>Obrigado pela sua nova compra! Detectamos que você já possui uma conta em nosso sistema.</p>
+            
+            <p>Você pode acessar sua conta existente em:</p>
+            <p style="text-align: center; margin: 20px 0;">
+              <a href="https://membros.noteplanning.com" 
+                 style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                Acessar Minha Conta
+              </a>
+            </p>
+            
+            <p>Use seu email e senha habituais para fazer login.</p>
+            
+            <p>Se você esqueceu sua senha, pode redefini-la na página de login.</p>
+            
+            <p>Se você tiver alguma dúvida, não hesite em entrar em contato conosco.</p>
+            
+            <p>Atenciosamente,<br>Equipe NotePlanning</p>
+          </div>
+        `,
+      });
+
+      return true;
+    } catch (error) {
+      LoggerHelper.error('EmailService', 'sendExistingAccountEmail', 'Failed to send existing account email', error);
+      return false;
+    }
+  }
 }

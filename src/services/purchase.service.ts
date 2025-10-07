@@ -87,7 +87,7 @@ export class PurchaseService extends BaseService {
     products?: any[];
   }) {
     try {
-      // Buscar dados do customer para preencher corretamente
+      
       const customer = await this.prisma.customer.findUnique({
         where: { id: data.customerId },
         select: { name: true, email: true }
