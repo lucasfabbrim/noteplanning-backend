@@ -62,19 +62,19 @@ export class AbacatePayService extends BaseService {
       } else {
         // Customer novo - gerar senha aleatória
         generatedPassword = this.generateRandomPassword();
-        const hashedPassword = await bcrypt.hash(generatedPassword, 10);
         
         customer = await this.customerService.createCustomer({
           email: customerData.email,
           name: customerData.name,
           phone: customerData.cellphone,
-          password: hashedPassword,
+          password: generatedPassword, // Senha em texto plano - o CustomerService fará o hash
         });
         
         isNewCustomer = true;
         
         // Enviar email de boas-vindas com credenciais
         console.log('Sending welcome email to:', customer.email);
+        console.log('Generated password:', generatedPassword);
         const emailSent = await this.emailService.sendWelcomeEmailWithPassword(
           customer.email,
           customer.name,
