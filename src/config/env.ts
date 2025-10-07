@@ -23,6 +23,9 @@ const envSchema = z.object({
   ABACATEPAY_TOKEN_SECRET: z.string().min(1, 'ABACATEPAY_TOKEN_SECRET is required'),
 
   RESEND_API_KEY: z.string().min(1, 'RESEND_API_KEY is required'),
+
+  SUPABASE_URL: z.string().min(1, 'SUPABASE_URL is required'),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, 'SUPABASE_SERVICE_ROLE_KEY is required'),
 });
 
 export const env = envSchema.parse(process.env);

@@ -70,6 +70,7 @@ export class CustomerService extends BaseService {
       const customer = await this.customerRepository.create({
         email: data.email,
         name: data.name,
+        phone: data.phone,
         password: hashedPassword,
         role: Role.FREE,
         isActive: true,

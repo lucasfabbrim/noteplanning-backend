@@ -365,7 +365,7 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
     }
   });
 
-  fastify.post('/:slug/video', {
+  fastify.post('/:slug/videos', {
     schema: {
       description: 'Create new video in category',
       tags: ['Videos by Category'],
@@ -650,6 +650,159 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
       return reply.status(500).send({
         success: false,
         message: 'Failed to delete video',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  fastify.put('/:slug', {
+    schema: {
+      description: 'Update category by slug',
+      tags: ['Categories'],
+      params: {
+        type: 'object',
+        properties: {
+          slug: { type: 'string' },
+        },
+        required: ['slug'],
+      },
+      body: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          description: { type: 'string' },
+          slug: { type: 'string' },
+          isActive: { type: 'boolean' },
+          sortOrder: { type: 'number' },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const { slug } = request.params as { slug: string };
+      const body = request.body as {
+        name?: string;
+        description?: string;
+        slug?: string;
+        isActive?: boolean;
+        sortOrder?: number;
+      };
+
+      const existingCategory = await prisma.category.findFirst({
+        where: {
+          slug,
+          deactivatedAt: null,
+        },
+      });
+
+      if (!existingCategory) {
+        return reply.status(404).send({
+          success: false,
+          message: 'Category not found',
+        });
+      }
+
+      // Verificar se o slug já existe em outra categoria
+      if (body.slug && body.slug !== existingCategory.slug) {
+        const slugExists = await prisma.category.findFirst({
+          where: {
+            slug: body.slug,
+            id: { not: existingCategory.id },
+            deactivatedAt: null,
+          },
+        });
+
+        if (slugExists) {
+          return reply.status(409).send({
+            success: false,
+            message: 'Slug already exists',
+          });
+        }
+      }
+
+      const category = await prisma.category.update({
+        where: { slug },
+        data: {
+          ...(body.name && { name: body.name }),
+          ...(body.description !== undefined && { description: body.description }),
+          ...(body.slug && { slug: body.slug }),
+          ...(body.isActive !== undefined && { isActive: body.isActive }),
+          ...(body.sortOrder !== undefined && { sortOrder: body.sortOrder }),
+        },
+        include: {
+          videos: {
+            where: { isPublished: true },
+            select: {
+              id: true,
+              slug: true,
+              title: true,
+              description: true,
+              thumbnail: true,
+              duration: true,
+            },
+          },
+        },
+      });
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Category updated successfully',
+        data: sanitizeCategory(category),
+      });
+    } catch (error) {
+      return reply.status(500).send({
+        success: false,
+        message: 'Failed to update category',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  fastify.delete('/:slug', {
+    schema: {
+      description: 'Delete category by slug (soft delete)',
+      tags: ['Categories'],
+      params: {
+        type: 'object',
+        properties: {
+          slug: { type: 'string' },
+        },
+        required: ['slug'],
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const { slug } = request.params as { slug: string };
+
+      const existingCategory = await prisma.category.findFirst({
+        where: {
+          slug,
+          deactivatedAt: null,
+        },
+      });
+
+      if (!existingCategory) {
+        return reply.status(404).send({
+          success: false,
+          message: 'Category not found',
+        });
+      }
+
+      await prisma.category.update({
+        where: { slug },
+        data: {
+          deactivatedAt: new Date(),
+        },
+      });
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Category deleted successfully',
+      });
+    } catch (error) {
+      return reply.status(500).send({
+        success: false,
+        message: 'Failed to delete category',
         error: error instanceof Error ? error.message : 'Unknown error',
       });
     }

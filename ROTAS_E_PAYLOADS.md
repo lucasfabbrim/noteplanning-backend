@@ -319,7 +319,7 @@
 }
 ```
 
-### **POST /v1/categories/:slug/video**
+### **POST /v1/categories/:slug/videos**
 **Payload:**
 ```json
 {

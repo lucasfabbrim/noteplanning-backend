@@ -30,13 +30,21 @@ export class AbacatePayService extends BaseService {
 
     const { data } = body;
     
-    if (data.billing?.customer?.metadata) {
+    // Log para debug
+    console.log('Webhook payload received:', JSON.stringify(body, null, 2));
+    console.log('Event type:', body.event);
+    
+    // Verificar se é o evento correto
+    if (body.event === 'billing.paid' && data.billing?.customer?.metadata) {
       const customerData = data.billing.customer.metadata;
+      console.log('Customer data from webhook:', customerData);
       
       // Verificar se customer já existe
       const existingCustomer = await this.prisma.customer.findUnique({
         where: { email: customerData.email }
       });
+      
+      console.log('Existing customer found:', existingCustomer ? 'Yes' : 'No');
 
       let customer;
       let isNewCustomer = false;
@@ -59,17 +67,20 @@ export class AbacatePayService extends BaseService {
         customer = await this.customerService.createCustomer({
           email: customerData.email,
           name: customerData.name,
+          phone: customerData.cellphone,
           password: hashedPassword,
         });
         
         isNewCustomer = true;
         
         // Enviar email de boas-vindas com credenciais
-        await this.emailService.sendWelcomeEmailWithPassword(
+        console.log('Sending welcome email to:', customer.email);
+        const emailSent = await this.emailService.sendWelcomeEmailWithPassword(
           customer.email,
           customer.name,
           generatedPassword
         );
+        console.log('Email sent successfully:', emailSent);
       }
 
       // Criar/atualizar produtos se existirem
@@ -89,6 +100,8 @@ export class AbacatePayService extends BaseService {
       };
 
       await this.purchaseService.createPurchase(purchaseData);
+    } else {
+      console.log('Event not handled:', body.event);
     }
 
     return { success: true, message: 'Webhook processed successfully' };

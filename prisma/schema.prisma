@@ -11,6 +11,7 @@ model Customer {
   id                   String     @id @default(cuid())
   email                String     @unique
   name                 String
+  phone                String?
   password             String
   role                 Role       @default(FREE)
   isActive             Boolean    @default(true)

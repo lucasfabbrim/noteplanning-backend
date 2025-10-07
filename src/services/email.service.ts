@@ -17,8 +17,8 @@ export class EmailService {
   ): Promise<boolean> {
     try {
       const result = await this.resend.emails.send({
-        from: 'onboarding@resend.dev',
-        to: to,
+        from: 'NotePlanning <noreply@notifications.noteplanning.com>',
+        to: [to],
         subject: 'Bem-vindo ao NotePlanning - Suas credenciais de acesso',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -66,8 +66,8 @@ export class EmailService {
       ).join('');
 
       const result = await this.resend.emails.send({
-        from: 'onboarding@resend.dev',
-        to: to,
+        from: 'NotePlanning <noreply@notifications.noteplanning.com>',
+        to: [to],
         subject: 'Confirmação de Compra - NotePlanning',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -106,9 +106,12 @@ export class EmailService {
 
   async sendWelcomeEmailWithPassword(to: string, name: string, password: string): Promise<boolean> {
     try {
+      console.log('EmailService: Attempting to send welcome email to:', to);
+      console.log('EmailService: Using API key:', env.RESEND_API_KEY ? 'Present' : 'Missing');
+      
       const result = await this.resend.emails.send({
-        from: 'NotePlanning <noreply@noteplanning.com>',
-        to,
+        from: 'NotePlanning <noreply@notifications.noteplanning.com>',
+        to: [to],
         subject: 'Bem-vindo ao NotePlanning! Sua conta foi criada',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -139,8 +142,10 @@ export class EmailService {
         `,
       });
 
+      console.log('EmailService: Email sent successfully, result:', result);
       return true;
     } catch (error) {
+      console.log('EmailService: Error sending email:', error);
       LoggerHelper.error('EmailService', 'sendWelcomeEmailWithPassword', 'Failed to send welcome email with password', error);
       return false;
     }
@@ -149,8 +154,8 @@ export class EmailService {
   async sendExistingAccountEmail(to: string, name: string): Promise<boolean> {
     try {
       const result = await this.resend.emails.send({
-        from: 'NotePlanning <noreply@noteplanning.com>',
-        to,
+        from: 'NotePlanning <noreply@notifications.noteplanning.com>',
+        to: [to],
         subject: 'Nova compra realizada - NotePlanning',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">

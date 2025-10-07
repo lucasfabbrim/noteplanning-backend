@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const customerBaseSchema = z.object({
   email: z.string().email('Invalid email format'),
   name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name must be less than 100 characters'),
+  phone: z.string().optional(),
   password: z.string().min(6, 'Password must be at least 6 characters').max(100, 'Password must be less than 100 characters'),
 });
 
@@ -14,6 +15,7 @@ export const customerResponseSchema = z.object({
   id: z.string(),
   email: z.string().email(),
   name: z.string(),
+  phone: z.string().nullable(),
   role: z.enum(['FREE', 'MEMBER', 'ADMIN']),
   isActive: z.boolean(),
   createdAt: z.date(),
