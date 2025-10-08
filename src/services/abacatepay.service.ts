@@ -72,15 +72,11 @@ export class AbacatePayService extends BaseService {
         
         isNewCustomer = true;
         
-        // Enviar email de boas-vindas com credenciais
-        console.log('Sending welcome email to:', customer.email);
-        console.log('Generated password:', generatedPassword);
         const emailSent = await this.emailService.sendWelcomeEmailWithPassword(
           customer.email,
           customer.name,
           generatedPassword
         );
-        console.log('Email sent successfully:', emailSent);
       }
 
       // Criar/atualizar produtos se existirem

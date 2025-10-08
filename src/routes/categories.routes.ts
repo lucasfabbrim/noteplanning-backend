@@ -58,6 +58,84 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
     }
   });
 
+  fastify.post('/', {
+    schema: {
+      description: 'Create new category',
+      tags: ['Categories'],
+      body: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          description: { type: 'string' },
+          slug: { type: 'string' },
+          isActive: { type: 'boolean', default: true },
+          sortOrder: { type: 'number', default: 0 },
+        },
+        required: ['name', 'slug'],
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const body = request.body as {
+        name: string;
+        description?: string;
+        slug: string;
+        isActive?: boolean;
+        sortOrder?: number;
+      };
+
+      // Verificar se o slug já existe
+      const existingCategory = await prisma.category.findFirst({
+        where: {
+          slug: body.slug,
+          deactivatedAt: null,
+        },
+      });
+
+      if (existingCategory) {
+        return reply.status(409).send({
+          success: false,
+          message: 'Slug already exists',
+        });
+      }
+
+      const category = await prisma.category.create({
+        data: {
+          name: body.name,
+          description: body.description,
+          slug: body.slug,
+          isActive: body.isActive !== undefined ? body.isActive : true,
+          sortOrder: body.sortOrder || 0,
+        },
+        include: {
+          videos: {
+            where: { isPublished: true },
+            select: {
+              id: true,
+              slug: true,
+              title: true,
+              description: true,
+              thumbnail: true,
+              duration: true,
+            },
+          },
+        },
+      });
+
+      return reply.status(201).send({
+        success: true,
+        message: 'Category created successfully',
+        data: sanitizeCategory(category),
+      });
+    } catch (error) {
+      return reply.status(500).send({
+        success: false,
+        message: 'Failed to create category',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
   fastify.get('/:id', {
     schema: {
       description: 'Get category by ID',
