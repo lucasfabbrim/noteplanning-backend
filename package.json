@@ -27,7 +27,17 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "test:security": "vitest run tests/security",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:status": "supabase status",
+    "supabase:login": "supabase login",
+    "supabase:link": "supabase link",
+    "supabase:deploy": "./deploy-supabase.sh",
+    "supabase:functions:deploy": "supabase functions deploy noteplanning-api",
+    "supabase:functions:serve": "supabase functions serve noteplanning-api --no-verify-jwt",
+    "supabase:db:push": "supabase db push",
+    "supabase:db:reset": "supabase db reset"
   },
   "keywords": [
     "nodejs",
