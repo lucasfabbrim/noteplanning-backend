@@ -17,8 +17,8 @@ FROM base AS deps
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma
 
-  # Instalar apenas dependências de produção
-  RUN npm ci --omit=dev
+# Instalar apenas dependências de produção
+RUN npm ci --omit=dev
 
 # --------------------------------------------
 # Builder stage
@@ -55,25 +55,25 @@ ENV NODE_ENV=production
 
 # Criar usuário não-root
 RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 fastify
+RUN adduser --system --uid 1001 nodeuser
 
 # Copiar arquivos necessários do builder
-COPY --from=builder --chown=fastify:nodejs /app/dist ./dist
-COPY --from=builder --chown=fastify:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=fastify:nodejs /app/package.json ./package.json
-COPY --from=builder --chown=fastify:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nodeuser:nodejs /app/dist ./dist
+COPY --from=builder --chown=nodeuser:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nodeuser:nodejs /app/package.json ./package.json
+COPY --from=builder --chown=nodeuser:nodejs /app/prisma ./prisma
 
 # Usar usuário não-root
-USER fastify
+USER nodeuser
 
 # Expor porta
 EXPOSE 3000
 ENV PORT=3000
 ENV HOST=0.0.0.0
 
-# Health check (removido para economizar recursos)
-# HEALTHCHECK --interval=60s --timeout=3s --start-period=5s --retries=2 \
-#   CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+# Health check para Supabase
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
 # Start da aplicação
 CMD ["npm", "run", "start"]

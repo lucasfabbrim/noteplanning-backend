@@ -206,8 +206,11 @@ export async function categoriesRoutes(fastify: FastifyInstance) {
     try {
       const { slug } = request.params as { slug: string };
       
-      const category = await prisma.category.findUnique({
-        where: { slug },
+      const category = await prisma.category.findFirst({
+        where: { 
+          slug,
+          deactivatedAt: null
+        },
         include: {
           videos: {
             where: { isPublished: true },

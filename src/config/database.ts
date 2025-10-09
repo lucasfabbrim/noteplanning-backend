@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { checkSupabaseConnection } from './supabase';
 
 class DatabaseConfig {
   private static instance: PrismaClient;
@@ -22,8 +23,16 @@ class DatabaseConfig {
     try {
       const prisma = DatabaseConfig.getInstance();
       await prisma.$connect();
+      
+      // Verificar conexão com Supabase também
+      const supabaseConnected = await checkSupabaseConnection();
+      if (!supabaseConnected) {
+        console.warn('Supabase connection check failed, but Prisma connection is working');
+      }
+      
+      console.log('✅ Database connection established successfully');
     } catch (error) {
-      console.error('Database connection failed');
+      console.error('❌ Database connection failed:', error);
       process.exit(1);
     }
   }
@@ -32,18 +41,33 @@ class DatabaseConfig {
     try {
       const prisma = DatabaseConfig.getInstance();
       await prisma.$disconnect();
+      console.log('✅ Database connection closed');
     } catch (error) {
+      console.error('Error disconnecting from database:', error);
     }
   }
 
-  public static async healthCheck(): Promise<boolean> {
+  public static async healthCheck(): Promise<{ prisma: boolean; supabase: boolean }> {
+    const results = {
+      prisma: false,
+      supabase: false,
+    };
+
     try {
       const prisma = DatabaseConfig.getInstance();
       await prisma.$queryRaw`SELECT 1`;
-      return true;
+      results.prisma = true;
     } catch (error) {
-      return false;
+      console.error('Prisma health check failed:', error);
     }
+
+    try {
+      results.supabase = await checkSupabaseConnection();
+    } catch (error) {
+      console.error('Supabase health check failed:', error);
+    }
+
+    return results;
   }
 }
 

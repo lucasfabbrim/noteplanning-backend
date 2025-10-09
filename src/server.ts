@@ -32,10 +32,27 @@ const fastify = Fastify({
 async function buildServer() {
   try {
     await fastify.register(cors, {
-      origin: true,
+      origin: [
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'https://noteplanning.com',
+        'https://www.noteplanning.com',
+        'https://membros.noteplanning.com'
+      ],
       credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+      allowedHeaders: [
+        'Content-Type', 
+        'Authorization', 
+        'Accept',
+        'Origin',
+        'X-Requested-With',
+        'Access-Control-Allow-Origin',
+        'Access-Control-Allow-Headers',
+        'Access-Control-Allow-Methods'
+      ],
+      exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
+      maxAge: 86400
     });
 
     await fastify.register(swagger, {
