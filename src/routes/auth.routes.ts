@@ -72,4 +72,21 @@ export async function authRoutes(fastify: FastifyInstance) {
     });
   });
 
+  // Debug endpoint - remove in production
+  fastify.get('/debug/:email', async (request, reply) => {
+    try {
+      const { email } = request.params as { email: string };
+      const customer = await customerService.getCustomerByEmail(email);
+      return reply.status(200).send({
+        success: true,
+        data: customer
+      });
+    } catch (error) {
+      return reply.status(404).send({
+        success: false,
+        message: error instanceof Error ? error.message : 'Customer not found'
+      });
+    }
+  });
+
 }

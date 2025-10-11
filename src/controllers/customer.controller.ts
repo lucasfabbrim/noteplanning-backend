@@ -1,13 +1,16 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { BaseController } from './base.controller';
+import { CustomerService } from '@/services/customer.service';
 
 export class CustomerController extends BaseController {
   private prisma: PrismaClient;
+  private customerService: CustomerService;
 
   constructor(prisma: PrismaClient) {
     super();
     this.prisma = prisma;
+    this.customerService = new CustomerService(prisma);
   }
 
   async getAllCustomers(request: FastifyRequest, reply: FastifyReply) {
@@ -67,34 +70,10 @@ export class CustomerController extends BaseController {
     try {
       const body = request.body as { email: string; password: string; name: string };
       
-      const existingCustomer = await this.prisma.customer.findFirst({
-        where: {
-          email: body.email,
-          deactivatedAt: null,
-        },
-      });
-
-      if (existingCustomer) {
-        return this.sendError(reply, 'Customer already exists', 409);
-      }
-
-      const customer = await this.prisma.customer.create({
-        data: {
-          email: body.email,
-          name: body.name,
-          password: body.password, // This should be hashed
-          role: 'FREE',
-          isActive: true,
-        },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          role: true,
-          isActive: true,
-          createdAt: true,
-          updatedAt: true,
-        },
+      const customer = await this.customerService.createCustomer({
+        email: body.email,
+        password: body.password,
+        name: body.name,
       });
 
       return this.sendCreated(reply, customer, 'Customer created successfully');

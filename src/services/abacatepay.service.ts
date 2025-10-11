@@ -1,21 +1,18 @@
 import { PrismaClient } from '@prisma/client';
 import { BaseService } from './base.service';
 import { CustomerService } from './customer.service';
-import { ProductService } from './product.service';
 import { PurchaseService } from './purchase.service';
 import { EmailService } from './email.service';
 import bcrypt from 'bcryptjs';
 
 export class AbacatePayService extends BaseService {
   private customerService: CustomerService;
-  private productService: ProductService;
   private purchaseService: PurchaseService;
   private emailService: EmailService;
 
   constructor(prisma: PrismaClient) {
     super(prisma);
     this.customerService = new CustomerService(prisma);
-    this.productService = new ProductService(prisma);
     this.purchaseService = new PurchaseService(prisma);
     this.emailService = new EmailService();
   }
@@ -79,12 +76,7 @@ export class AbacatePayService extends BaseService {
         );
       }
 
-      // Criar/atualizar produtos se existirem
-      if (data.billing?.products) {
-        for (const productData of data.billing.products) {
-          await this.productService.createOrUpdateProduct(productData);
-        }
-      }
+      // Produtos removidos - não mais suportados no novo schema
 
       // Criar purchase
       const purchaseData = {

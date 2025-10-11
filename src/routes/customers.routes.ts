@@ -74,8 +74,8 @@ export async function customersRoutes(fastify: FastifyInstance) {
             where: { deactivatedAt: null },
             select: {
               id: true,
-              amount: true,
-              status: true,
+              price: true,
+              paidAt: true,
               createdAt: true
             }
           }
@@ -635,19 +635,10 @@ export async function customersRoutes(fastify: FastifyInstance) {
       const purchase = await prisma.purchase.create({
         data: {
           customerId: id,
-          amount: body.amount,
-          paymentAmount: body.paymentAmount || body.amount,
-          event: body.event || 'payment.completed',
-          status: body.status || 'completed',
-          customerName: body.customerName,
-          customerEmail: body.customerEmail,
-          customerPhone: body.customerPhone,
-          customerTaxId: body.customerTaxId,
-          products: body.products,
-          paymentMethod: body.paymentMethod || 'manual',
-          transactionId: body.transactionId || `manual_${Date.now()}`,
-          webhookData: body.webhookData,
-          devMode: body.devMode || false,
+          externalId: body.externalId || `purchase_${Date.now()}`,
+          price: body.amount,
+          method: body.method || 'unknown',
+          paidAt: body.status === 'completed' ? new Date() : null,
         },
         include: {
           customer: {

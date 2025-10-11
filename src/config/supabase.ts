@@ -4,7 +4,7 @@ import { env } from './env';
 // Cliente Supabase para operações do lado do servidor
 export const supabaseAdmin = createClient(
   env.SUPABASE_URL,
-  env.SUPABASE_SERVICE_ROLE_KEY,
+  env.SUPABASE_JWT_SECRET,
   {
     auth: {
       autoRefreshToken: false,
@@ -16,7 +16,7 @@ export const supabaseAdmin = createClient(
 // Cliente Supabase para operações públicas
 export const supabase = createClient(
   env.SUPABASE_URL,
-  env.SUPABASE_ANON_KEY,
+  env.SUPABASE_KEY,
   {
     auth: {
       autoRefreshToken: true,

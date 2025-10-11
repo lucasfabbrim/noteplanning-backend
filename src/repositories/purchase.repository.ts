@@ -42,10 +42,10 @@ export class PurchaseRepository extends BaseRepository<Purchase> {
     }) as any;
   }
 
-  async findByTransactionId(transactionId: string): Promise<Purchase | null> {
+  async findByExternalId(externalId: string): Promise<Purchase | null> {
     return this.prisma.purchase.findFirst({
       where: {
-        transactionId,
+        externalId,
         deactivatedAt: null,
       },
     });

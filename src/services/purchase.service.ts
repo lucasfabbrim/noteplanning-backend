@@ -84,6 +84,7 @@ export class PurchaseService extends BaseService {
     externalId?: string;
     amount: number;
     status: string;
+    method?: string;
     products?: any[];
   }) {
     try {
@@ -96,14 +97,10 @@ export class PurchaseService extends BaseService {
       const purchase = await this.prisma.purchase.create({
         data: {
           customerId: data.customerId,
-          amount: data.amount,
-          paymentAmount: data.amount,
-          event: 'purchase_created',
-          status: data.status,
-          customerName: customer?.name || 'Customer',
-          customerEmail: customer?.email || 'customer@example.com',
-          transactionId: data.externalId,
-          products: data.products ? data.products : undefined,
+          externalId: data.externalId || `purchase_${Date.now()}`,
+          price: data.amount,
+          method: data.method || 'unknown',
+          paidAt: data.status === 'completed' ? new Date() : null,
         },
         include: {
           customer: {
@@ -128,7 +125,7 @@ export class PurchaseService extends BaseService {
         where: {
           customerId,
           deactivatedAt: null,
-          status: 'completed',
+          paidAt: { not: null },
         },
         include: {
           customer: true,
@@ -147,7 +144,7 @@ export class PurchaseService extends BaseService {
         where: {
           customerId,
           deactivatedAt: null,
-          status: 'completed',
+          paidAt: { not: null },
         },
       });
 
@@ -163,7 +160,7 @@ export class PurchaseService extends BaseService {
         where: {
           customerId,
           deactivatedAt: null,
-          status: 'completed',
+          paidAt: { not: null },
         },
       });
 
@@ -179,7 +176,7 @@ export class PurchaseService extends BaseService {
         where: {
           customerId,
           deactivatedAt: null,
-          status: 'completed',
+          paidAt: { not: null },
         },
       });
 

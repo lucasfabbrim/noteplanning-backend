@@ -8,114 +8,122 @@ datasource db {
 }
 
 model Customer {
-  id                   String     @id @default(cuid())
-  email                String     @unique
+  id                   String           @id @default(cuid())
+  email                String           @unique
   name                 String
   phone                String?
   password             String
-  role                 Role       @default(FREE)
-  isActive             Boolean    @default(true)
+  role                 Role             @default(FREE)
+  isActive             Boolean          @default(true)
   resetPasswordToken   String?
   resetPasswordExpires DateTime?
-  createdAt            DateTime   @default(now())
-  updatedAt            DateTime   @updatedAt
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
   deactivatedAt        DateTime?
   purchases            Purchase[]
+  credits              Credits[]
+  creditsHistory       CreditsHistory[]
+  essays               Essay[]
 
   @@index([email])
   @@index([role])
   @@map("customers")
 }
 
-model Category {
-  id            String    @id @default(cuid())
-  name          String
-  description   String?
-  slug          String    @unique
-  isActive      Boolean   @default(true)
-  sortOrder     Int       @default(0)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  deactivatedAt DateTime?
-  videos        Video[]
-  products      Product[]
-
-  @@index([slug])
-  @@index([isActive])
-  @@index([sortOrder])
-  @@map("categories")
-}
-
-model Product {
-  id            String    @id @default(cuid())
-  externalId    String    @unique // ID do produto no AbacatePay
-  name          String
-  description   String?
-  price         Float
-  isActive      Boolean   @default(true)
-  categoryId    String?
-  category      Category? @relation(fields: [categoryId], references: [id])
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  deactivatedAt DateTime?
-
-  @@index([externalId])
-  @@index([isActive])
-  @@index([categoryId])
-  @@map("products")
-}
-
-model Video {
-  id            String    @id @default(cuid())
-  title         String
-  slug          String    @unique
-  description   String?
-  url           String
-  thumbnail     String?
-  duration      Int?
-  isPublished   Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  deactivatedAt DateTime?
-  categoryId    String?
-  Category      Category? @relation(fields: [categoryId], references: [id])
-
-  @@index([slug])
-  @@index([isPublished])
-  @@index([categoryId])
-  @@map("videos")
-}
-
 model Purchase {
   id            String    @id @default(cuid())
+  externalId    String    @unique // ID externo do pagamento
+  price         Float
+  method        String // Método de pagamento
   customerId    String
-  amount        Float
-  paymentAmount Float
-  event         String
-  status        String    @default("completed")
-  customerName  String
-  customerEmail String
-  customerPhone String?
-  customerTaxId String?
-  products      Json?
-  webhookData   Json?
-  paymentMethod String?
-  transactionId String?
-  devMode       Boolean   @default(false)
+  paidAt        DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deactivatedAt DateTime?
   customer      Customer  @relation(fields: [customerId], references: [id])
 
   @@index([customerId])
-  @@index([customerEmail])
+  @@index([externalId])
+  @@index([paidAt])
+  @@map("purchases")
+}
+
+model Credits {
+  id                String           @id @default(cuid())
+  customerId        String
+  credits           Int              @default(0)
+  credits_used      Int              @default(0)
+  credits_remaining Int              @default(0)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  deactivatedAt     DateTime?
+  customer          Customer         @relation(fields: [customerId], references: [id])
+  creditsHistory    CreditsHistory[]
+
+  @@index([customerId])
+  @@map("credits")
+}
+
+model CreditsHistory {
+  id             String    @id @default(cuid())
+  customerId     String
+  essayId        String?
+  creditId       String
+  dateUsedCredit DateTime  @default(now())
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deactivatedAt  DateTime?
+  customer       Customer  @relation(fields: [customerId], references: [id])
+  credits        Credits   @relation(fields: [creditId], references: [id])
+  Essay          Essay?    @relation(fields: [essayId], references: [id])
+
+  @@index([customerId])
+  @@index([creditId])
+  @@index([dateUsedCredit])
+  @@map("credits_history")
+}
+
+model Essay {
+  id                     String           @id @default(cuid())
+  customerId             String
+  essayTitle             String
+  essayFileUrl           String
+  essayText              String
+  wordCount              Int
+  connectorCount         Int
+  grammarErrors          Int
+  cohesionScore          Int // Nota de coesão (0-200)
+  coherenceScore         Int // Nota de coerência (0-200)
+  argumentationScore     Int // Nota de argumentação (0-200)
+  punctuationIssues      Int
+  standardDeviations     Int
+  deviationsByCompetence Json // {competence1: number, competence2: number, ...}
+  scoreByCompetence      Json // {competence1: number, competence2: number, ...}
+  totalScore             Int // Nota final (0-1000)
+  aiVersion              String
+  feedbackComments       String[] // Lista de observações específicas
+  commentedReview        String // Revisão comentada completa
+  status                 EssayStatus      @default(PENDING)
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  deactivatedAt          DateTime?
+  customer               Customer         @relation(fields: [customerId], references: [id])
+  creditsHistory         CreditsHistory[]
+
+  @@index([customerId])
   @@index([status])
   @@index([createdAt])
-  @@map("purchases")
+  @@map("essays")
 }
 
 enum Role {
   FREE
   MEMBER
   ADMIN
+}
+
+enum EssayStatus {
+  PENDING
+  REVIEWED
+  ERROR
 }
