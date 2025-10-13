@@ -1,0 +1,129 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id                   String           @id @default(cuid())
+  email                String           @unique
+  name                 String
+  phone                String?
+  password             String
+  role                 Role             @default(FREE)
+  isActive             Boolean          @default(true)
+  resetPasswordToken   String?
+  resetPasswordExpires DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  deactivatedAt        DateTime?
+  purchases            Purchase[]
+  credits              Credits[]
+  creditsHistory       CreditsHistory[]
+  essays               Essay[]
+
+  @@index([email])
+  @@index([role])
+  @@map("customers")
+}
+
+model Purchase {
+  id            String    @id @default(cuid())
+  externalId    String    @unique // ID externo do pagamento
+  price         Float
+  method        String // Método de pagamento
+  customerId    String
+  paidAt        DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deactivatedAt DateTime?
+  customer      Customer  @relation(fields: [customerId], references: [id])
+
+  @@index([customerId])
+  @@index([externalId])
+  @@index([paidAt])
+  @@map("purchases")
+}
+
+model Credits {
+  id                String           @id @default(cuid())
+  customerId        String
+  credits           Int              @default(0)
+  credits_used      Int              @default(0)
+  credits_remaining Int              @default(0)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  deactivatedAt     DateTime?
+  customer          Customer         @relation(fields: [customerId], references: [id])
+  creditsHistory    CreditsHistory[]
+
+  @@index([customerId])
+  @@map("credits")
+}
+
+model CreditsHistory {
+  id             String    @id @default(cuid())
+  customerId     String
+  essayId        String?
+  creditId       String
+  dateUsedCredit DateTime  @default(now())
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deactivatedAt  DateTime?
+  customer       Customer  @relation(fields: [customerId], references: [id])
+  credits        Credits   @relation(fields: [creditId], references: [id])
+  Essay          Essay?    @relation(fields: [essayId], references: [id])
+
+  @@index([customerId])
+  @@index([creditId])
+  @@index([dateUsedCredit])
+  @@map("credits_history")
+}
+
+model Essay {
+  id                     String           @id @default(cuid())
+  customerId             String
+  essayTitle             String
+  essayFileUrl           String
+  essayText              String
+  wordCount              Int
+  connectorCount         Int
+  grammarErrors          Int
+  cohesionScore          Int // Nota de coesão (0-200)
+  coherenceScore         Int // Nota de coerência (0-200)
+  argumentationScore     Int // Nota de argumentação (0-200)
+  punctuationIssues      Int
+  standardDeviations     Int
+  deviationsByCompetence Json // {competence1: number, competence2: number, ...}
+  scoreByCompetence      Json // {competence1: number, competence2: number, ...}
+  totalScore             Int // Nota final (0-1000)
+  aiVersion              String
+  feedbackComments       String[] // Lista de observações específicas
+  commentedReview        String // Revisão comentada completa
+  status                 EssayStatus      @default(PENDING)
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  deactivatedAt          DateTime?
+  customer               Customer         @relation(fields: [customerId], references: [id])
+  creditsHistory         CreditsHistory[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("essays")
+}
+
+enum Role {
+  FREE
+  MEMBER
+  ADMIN
+}
+
+enum EssayStatus {
+  PENDING
+  REVIEWED
+  ERROR
+}

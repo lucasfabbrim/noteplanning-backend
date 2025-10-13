@@ -1,30 +1,43 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * import {onCall} from "firebase-functions/v2/https";
- * import {onDocumentWritten} from "firebase-functions/v2/firestore";
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
+import {setGlobalOptions, logger} from "firebase-functions";
+import {onRequest} from "firebase-functions/v2/https";
+import * as admin from 'firebase-admin';
+import { buildServer } from './server';
 
-import {setGlobalOptions} from "firebase-functions";
-
-// Start writing functions
-// https://firebase.google.com/docs/functions/typescript
-
-// For cost control, you can set the maximum number of containers that can be
-// running at the same time. This helps mitigate the impact of unexpected
-// traffic spikes by instead downgrading performance. This limit is a
-// per-function limit. You can override the limit for each function using the
-// `maxInstances` option in the function's options, e.g.
-// `onRequest({ maxInstances: 5 }, (req, res) => { ... })`.
-// NOTE: setGlobalOptions does not apply to functions using the v1 API. V1
-// functions should each use functions.runWith({ maxInstances: 10 }) instead.
-// In the v1 API, each function can only serve one request per container, so
-// this will be the maximum concurrent request count.
+// Configuração global do Firebase Functions
 setGlobalOptions({maxInstances: 10});
 
-// export const helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+// Inicializar Firebase Admin (apenas uma vez)
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
+
+// Cache do servidor para evitar recriar
+let cachedApp: any = null;
+
+// Função otimizada com Firebase Auth
+export const api = onRequest({
+  maxInstances: 10,
+  timeoutSeconds: 60,
+  memory: "1GiB",
+}, async (request, response) => {
+  try {
+    logger.info("API Function called", {structuredData: true});
+
+    // Usar servidor em cache ou criar novo
+    if (!cachedApp) {
+      cachedApp = await buildServer();
+      await cachedApp.ready();
+      logger.info("Fastify server initialized and cached");
+    }
+
+    // Emitir a requisição para o servidor Fastify
+    cachedApp.server.emit('request', request, response);
+
+  } catch (error) {
+    logger.error("Error in API Function", error);
+    response.status(500).json({
+      error: "Internal Server Error",
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+});

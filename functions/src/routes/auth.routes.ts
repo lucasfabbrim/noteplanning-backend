@@ -29,9 +29,9 @@ export async function authRoutes(fastify: FastifyInstance) {
       return reply.status(200).send({
         success: true,
         message: 'Login successful',
-        data: {
-          token: result.token
-        }
+        user: result.user,
+        customToken: result.customToken,
+        firebaseUid: result.firebaseUid
       });
     } catch (error) {
       return reply.status(401).send({
