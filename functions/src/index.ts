@@ -11,9 +11,6 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-// Cache do servidor para evitar recriar
-let cachedApp: any = null;
-
 // Função otimizada com Firebase Auth
 export const api = onRequest({
   maxInstances: 10,
@@ -23,15 +20,12 @@ export const api = onRequest({
   try {
     logger.info("API Function called", {structuredData: true});
 
-    // Usar servidor em cache ou criar novo
-    if (!cachedApp) {
-      cachedApp = await buildServer();
-      await cachedApp.ready();
-      logger.info("Fastify server initialized and cached");
-    }
-
+    // Criar novo servidor a cada requisição para evitar conflitos
+    const app = await buildServer();
+    await app.ready();
+    
     // Emitir a requisição para o servidor Fastify
-    cachedApp.server.emit('request', request, response);
+    app.server.emit('request', request, response);
 
   } catch (error) {
     logger.error("Error in API Function", error);

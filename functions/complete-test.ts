@@ -66,7 +66,8 @@ const admin = mockFirebaseAdmin as any;
 async function authenticate(request: any, reply: any) {
   const token = request.headers.authorization?.replace('Bearer ', '');
   if (!token) {
-    return reply.status(401).send({ error: 'Unauthorized' });
+    reply.status(401).send({ error: 'Unauthorized' });
+    return false;
   }
   
   // Mock: sempre retorna usuário válido
@@ -78,19 +79,24 @@ async function authenticate(request: any, reply: any) {
     isActive: true,
     firebaseUid: 'mock_uid_123'
   };
+  return true;
 }
 
 async function requireAdmin(request: any, reply: any) {
-  await authenticate(request, reply);
+  const isAuthenticated = await authenticate(request, reply);
+  if (!isAuthenticated) return; // authenticate já enviou resposta
+  
   if (request.user?.role !== 'ADMIN') {
-    return reply.status(403).send({ error: 'Forbidden' });
+    reply.status(403).send({ error: 'Forbidden' });
   }
 }
 
 async function requireMemberOrAdmin(request: any, reply: any) {
-  await authenticate(request, reply);
+  const isAuthenticated = await authenticate(request, reply);
+  if (!isAuthenticated) return; // authenticate já enviou resposta
+  
   if (!['MEMBER', 'ADMIN'].includes(request.user?.role)) {
-    return reply.status(403).send({ error: 'Forbidden' });
+    reply.status(403).send({ error: 'Forbidden' });
   }
 }
 
@@ -298,35 +304,70 @@ async function start() {
     // CUSTOMER ROUTES
     // =============================================================================
 
-    fastify.get('/v1/customers', { preHandler: requireAdmin }, async (request, reply) => {
+    fastify.get('/v1/customers', async (request, reply) => {
+      const isAuthenticated = await authenticate(request, reply);
+      if (!isAuthenticated) return;
+      
+      if (request.user?.role !== 'ADMIN') {
+        return reply.status(403).send({ error: 'Forbidden' });
+      }
+
       return reply.send({
         success: true,
         data: []
       });
     });
 
-    fastify.get('/v1/customers/:id', { preHandler: requireAdmin }, async (request, reply) => {
+    fastify.get('/v1/customers/:id', async (request, reply) => {
+      const isAuthenticated = await authenticate(request, reply);
+      if (!isAuthenticated) return;
+      
+      if (request.user?.role !== 'ADMIN') {
+        return reply.status(403).send({ error: 'Forbidden' });
+      }
+
       return reply.send({
         success: true,
         data: { id: (request.params as any).id }
       });
     });
 
-    fastify.get('/v1/customers/email/:email', { preHandler: requireAdmin }, async (request, reply) => {
+    fastify.get('/v1/customers/email/:email', async (request, reply) => {
+      const isAuthenticated = await authenticate(request, reply);
+      if (!isAuthenticated) return;
+      
+      if (request.user?.role !== 'ADMIN') {
+        return reply.status(403).send({ error: 'Forbidden' });
+      }
+
       return reply.send({
         success: true,
         data: { email: (request.params as any).email }
       });
     });
 
-    fastify.put('/v1/customers/:id', { preHandler: requireAdmin }, async (request, reply) => {
+    fastify.put('/v1/customers/:id', async (request, reply) => {
+      const isAuthenticated = await authenticate(request, reply);
+      if (!isAuthenticated) return;
+      
+      if (request.user?.role !== 'ADMIN') {
+        return reply.status(403).send({ error: 'Forbidden' });
+      }
+
       return reply.send({
         success: true,
         data: { id: (request.params as any).id }
       });
     });
 
-    fastify.delete('/v1/customers/:id', { preHandler: requireAdmin }, async (request, reply) => {
+    fastify.delete('/v1/customers/:id', async (request, reply) => {
+      const isAuthenticated = await authenticate(request, reply);
+      if (!isAuthenticated) return;
+      
+      if (request.user?.role !== 'ADMIN') {
+        return reply.status(403).send({ error: 'Forbidden' });
+      }
+
       return reply.send({
         success: true,
         message: 'Customer deleted'
@@ -358,70 +399,128 @@ async function start() {
       });
     });
 
-    fastify.get('/v1/essays/my', { preHandler: authenticate }, async (request, reply) => {
+    fastify.get('/v1/essays/my', async (request, reply) => {
+      const isAuthenticated = await authenticate(request, reply);
+      if (!isAuthenticated) return;
+
       return reply.send({
         success: true,
         data: []
       });
     });
 
-    fastify.post('/v1/essays', { preHandler: authenticate }, async (request, reply) => {
+    fastify.post('/v1/essays', async (request, reply) => {
+      const isAuthenticated = await authenticate(request, reply);
+      if (!isAuthenticated) return;
+
       return reply.send({
         success: true,
         data: { id: 'new_essay_id' }
       });
     });
 
-    fastify.get('/v1/essays/:id', { preHandler: authenticate }, async (request, reply) => {
+    fastify.get('/v1/essays/:id', async (request, reply) => {
+      const isAuthenticated = await authenticate(request, reply);
+      if (!isAuthenticated) return;
+
       return reply.send({
         success: true,
         data: { id: (request.params as any).id }
       });
     });
 
-    fastify.get('/v1/essays/customer/:customerId', { preHandler: requireAdmin }, async (request, reply) => {
+    fastify.get('/v1/essays/customer/:customerId', async (request, reply) => {
+      const isAuthenticated = await authenticate(request, reply);
+      if (!isAuthenticated) return;
+      
+      if (request.user?.role !== 'ADMIN') {
+        return reply.status(403).send({ error: 'Forbidden' });
+      }
+
       return reply.send({
         success: true,
         data: []
       });
     });
 
-    fastify.get('/v1/essays/status/:status', { preHandler: requireAdmin }, async (request, reply) => {
+    fastify.get('/v1/essays/status/:status', async (request, reply) => {
+      const isAuthenticated = await authenticate(request, reply);
+      if (!isAuthenticated) return;
+      
+      if (request.user?.role !== 'ADMIN') {
+        return reply.status(403).send({ error: 'Forbidden' });
+      }
+
       return reply.send({
         success: true,
         data: []
       });
     });
 
-    fastify.patch('/v1/essays/:id/status', { preHandler: requireAdmin }, async (request, reply) => {
+    fastify.patch('/v1/essays/:id/status', async (request, reply) => {
+      const isAuthenticated = await authenticate(request, reply);
+      if (!isAuthenticated) return;
+      
+      if (request.user?.role !== 'ADMIN') {
+        return reply.status(403).send({ error: 'Forbidden' });
+      }
+
       return reply.send({
         success: true,
         data: { id: (request.params as any).id }
       });
     });
 
-    fastify.patch('/v1/essays/:id/scores', { preHandler: requireAdmin }, async (request, reply) => {
+    fastify.patch('/v1/essays/:id/scores', async (request, reply) => {
+      const isAuthenticated = await authenticate(request, reply);
+      if (!isAuthenticated) return;
+      
+      if (request.user?.role !== 'ADMIN') {
+        return reply.status(403).send({ error: 'Forbidden' });
+      }
+
       return reply.send({
         success: true,
         data: { id: (request.params as any).id }
       });
     });
 
-    fastify.patch('/v1/essays/:id/analysis', { preHandler: requireAdmin }, async (request, reply) => {
+    fastify.patch('/v1/essays/:id/analysis', async (request, reply) => {
+      const isAuthenticated = await authenticate(request, reply);
+      if (!isAuthenticated) return;
+      
+      if (request.user?.role !== 'ADMIN') {
+        return reply.status(403).send({ error: 'Forbidden' });
+      }
+
       return reply.send({
         success: true,
         data: { id: (request.params as any).id }
       });
     });
 
-    fastify.delete('/v1/essays/:id', { preHandler: requireAdmin }, async (request, reply) => {
+    fastify.delete('/v1/essays/:id', async (request, reply) => {
+      const isAuthenticated = await authenticate(request, reply);
+      if (!isAuthenticated) return;
+      
+      if (request.user?.role !== 'ADMIN') {
+        return reply.status(403).send({ error: 'Forbidden' });
+      }
+
       return reply.send({
         success: true,
         message: 'Essay deleted'
       });
     });
 
-    fastify.get('/v1/essays/stats', { preHandler: requireAdmin }, async (request, reply) => {
+    fastify.get('/v1/essays/stats', async (request, reply) => {
+      const isAuthenticated = await authenticate(request, reply);
+      if (!isAuthenticated) return;
+      
+      if (request.user?.role !== 'ADMIN') {
+        return reply.status(403).send({ error: 'Forbidden' });
+      }
+
       return reply.send({
         success: true,
         data: { total: 0, pending: 0, completed: 0 }
@@ -432,28 +531,52 @@ async function start() {
     // CREDITS ROUTES
     // =============================================================================
 
-    fastify.get('/v1/customers/credits', { preHandler: requireAdmin }, async (request, reply) => {
+    fastify.get('/v1/customers/credits', async (request, reply) => {
+      const isAuthenticated = await authenticate(request, reply);
+      if (!isAuthenticated) return;
+      
+      if (request.user?.role !== 'ADMIN') {
+        return reply.status(403).send({ error: 'Forbidden' });
+      }
+
       return reply.send({
         success: true,
         data: []
       });
     });
 
-    fastify.get('/v1/customers/credits-history', { preHandler: requireAdmin }, async (request, reply) => {
+    fastify.get('/v1/customers/credits-history', async (request, reply) => {
+      const isAuthenticated = await authenticate(request, reply);
+      if (!isAuthenticated) return;
+      
+      if (request.user?.role !== 'ADMIN') {
+        return reply.status(403).send({ error: 'Forbidden' });
+      }
+
       return reply.send({
         success: true,
         data: []
       });
     });
 
-    fastify.get('/v1/customers/my-credits', { preHandler: authenticate }, async (request, reply) => {
+    fastify.get('/v1/customers/my-credits', async (request, reply) => {
+      const isAuthenticated = await authenticate(request, reply);
+      if (!isAuthenticated) return;
+
       return reply.send({
         success: true,
         data: { credits: 0 }
       });
     });
 
-    fastify.post('/v1/customers/:id/credits', { preHandler: requireAdmin }, async (request, reply) => {
+    fastify.post('/v1/customers/:id/credits', async (request, reply) => {
+      const isAuthenticated = await authenticate(request, reply);
+      if (!isAuthenticated) return;
+      
+      if (request.user?.role !== 'ADMIN') {
+        return reply.status(403).send({ error: 'Forbidden' });
+      }
+
       return reply.send({
         success: true,
         data: { id: (request.params as any).id }
@@ -464,28 +587,52 @@ async function start() {
     // PURCHASES ROUTES
     // =============================================================================
 
-    fastify.get('/v1/customers/purchases', { preHandler: authenticate }, async (request, reply) => {
+    fastify.get('/v1/customers/purchases', async (request, reply) => {
+      const isAuthenticated = await authenticate(request, reply);
+      if (!isAuthenticated) return;
+
       return reply.send({
         success: true,
         data: []
       });
     });
 
-    fastify.get('/v1/customers/:id/purchases', { preHandler: requireAdmin }, async (request, reply) => {
+    fastify.get('/v1/customers/:id/purchases', async (request, reply) => {
+      const isAuthenticated = await authenticate(request, reply);
+      if (!isAuthenticated) return;
+      
+      if (request.user?.role !== 'ADMIN') {
+        return reply.status(403).send({ error: 'Forbidden' });
+      }
+
       return reply.send({
         success: true,
         data: []
       });
     });
 
-    fastify.post('/v1/customers/:id/purchases', { preHandler: requireAdmin }, async (request, reply) => {
+    fastify.post('/v1/customers/:id/purchases', async (request, reply) => {
+      const isAuthenticated = await authenticate(request, reply);
+      if (!isAuthenticated) return;
+      
+      if (request.user?.role !== 'ADMIN') {
+        return reply.status(403).send({ error: 'Forbidden' });
+      }
+
       return reply.send({
         success: true,
         data: { id: (request.params as any).id }
       });
     });
 
-    fastify.delete('/v1/customers/:id/purchases/:purchaseId', { preHandler: requireAdmin }, async (request, reply) => {
+    fastify.delete('/v1/customers/:id/purchases/:purchaseId', async (request, reply) => {
+      const isAuthenticated = await authenticate(request, reply);
+      if (!isAuthenticated) return;
+      
+      if (request.user?.role !== 'ADMIN') {
+        return reply.status(403).send({ error: 'Forbidden' });
+      }
+
       return reply.send({
         success: true,
         message: 'Purchase deleted'
